@@ -1,0 +1,8 @@
+{
+  "name": "MathPrep - AP Precalculus Study Platform",
+  "description": "Comprehensive AP Precalculus study platform featuring structured lessons, comprehensive study guides, searchable formula bank, and exam practice for all four College Board units.",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}

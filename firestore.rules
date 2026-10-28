@@ -1,0 +1,211 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // 1. Global Safety Net (Default-Deny Catch-All)
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // 2. Global Helper Functions & Primitives
+    function isValidId(id) {
+      return id is string && id.size() > 0 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    function isVerified() {
+      return isSignedIn() && (request.auth.token.email_verified == true || request.auth.token.firebase.sign_in_provider == 'google.com');
+    }
+
+    function isAdminUser() {
+      return isSignedIn()
+        && request.auth.token.email != null
+        && (request.auth.token.email == 'Searsokvarkhim1@gmail.com' || request.auth.token.email == 'searsokvarkhim1@gmail.com');
+    }
+
+    // Entity Validation: QuestionBankItem
+    function isValidQuestionBankItem(data) {
+      return data.keys().hasAll(['id', 'unit_id', 'topic_id', 'sub_topic_id', 'type', 'calculator_active', 'difficulty', 'is_published', 'content'])
+        && data.id is string && data.id.size() <= 128
+        && data.unit_id is string && data.unit_id.size() <= 32
+        && data.topic_id is string && data.topic_id.size() <= 16
+        && data.sub_topic_id is string && data.sub_topic_id.size() <= 32
+        && data.type in ['MCQ', 'FRQ']
+        && data.calculator_active is bool
+        && data.difficulty in ['Easy', 'Medium', 'Hard', 'Foundational', 'AP Standard', 'Challenge']
+        && data.is_published is bool
+        && data.content is map;
+    }
+
+    // Entity Validation: UserProfile
+    function isValidUserProfile(data) {
+      return data.keys().hasAll(['uid', 'email'])
+        && data.keys().hasOnly(['uid', 'email', 'displayName', 'targetScore', 'isPremium', 'subscription_end_date', 'limmyAI_credits', 'createdAt', 'updatedAt'])
+        && data.uid is string && data.uid.size() <= 128
+        && data.email is string && data.email.size() <= 256
+        && (!('displayName' in data) || (data.displayName is string && data.displayName.size() <= 100))
+        && (!('targetScore' in data) || (data.targetScore is number && data.targetScore >= 1 && data.targetScore <= 5))
+        && (!('isPremium' in data) || data.isPremium is bool)
+        && (!('subscription_end_date' in data) || (data.subscription_end_date is string && data.subscription_end_date.size() <= 100))
+        && (!('limmyAI_credits' in data) || (data.limmyAI_credits is number && data.limmyAI_credits >= 0))
+        && (!('createdAt' in data) || (data.createdAt is string && data.createdAt.size() <= 64))
+        && (!('updatedAt' in data) || (data.updatedAt is string && data.updatedAt.size() <= 64));
+    }
+
+    // Entity Validation: UserProgress
+    function isValidUserProgress(data) {
+      return data.keys().hasAll(['userId'])
+        && data.keys().hasOnly(['userId', 'completedLessons', 'bookmarkedFormulas', 'totalStudyMinutes', 'lastActiveAt'])
+        && data.userId is string && data.userId.size() <= 128
+        && (!('completedLessons' in data) || (data.completedLessons is list && data.completedLessons.size() <= 100))
+        && (!('bookmarkedFormulas' in data) || (data.bookmarkedFormulas is list && data.bookmarkedFormulas.size() <= 100))
+        && (!('totalStudyMinutes' in data) || (data.totalStudyMinutes is number && data.totalStudyMinutes >= 0))
+        && (!('lastActiveAt' in data) || (data.lastActiveAt is string && data.lastActiveAt.size() <= 64));
+    }
+
+    // Entity Validation: ExamAttempt
+    function isValidExamAttempt(data) {
+      return data.keys().hasAll(['userId', 'examId', 'score', 'totalQuestions'])
+        && data.keys().hasOnly(['userId', 'examId', 'score', 'totalQuestions', 'percentage', 'completedAt'])
+        && data.userId is string && data.userId.size() <= 128
+        && data.examId is string && data.examId.size() <= 64
+        && data.score is number && data.score >= 0
+        && data.totalQuestions is number && data.totalQuestions > 0
+        && (!('percentage' in data) || (data.percentage is number && data.percentage >= 0 && data.percentage <= 100))
+        && (!('completedAt' in data) || (data.completedAt is string && data.completedAt.size() <= 64));
+    }
+
+    // Entity Validation: PaymentSubmission
+    function isValidPaymentSubmission(data) {
+      return data.keys().hasAll(['user_id', 'user_email', 'status', 'created_at'])
+        && data.keys().hasOnly(['user_id', 'user_email', 'screenshot_url', 'status', 'amount', 'created_at', 'reviewed_at', 'reviewed_by', 'timestamp'])
+        && data.user_id is string && data.user_id.size() <= 128
+        && data.user_email is string && data.user_email.size() <= 256
+        && (!('screenshot_url' in data) || (data.screenshot_url is string && data.screenshot_url.size() <= 2000000))
+        && data.status in ['pending', 'approved', 'rejected']
+        && (!('amount' in data) || (data.amount is string && data.amount.size() <= 64))
+        && (!('created_at' in data) || (data.created_at is string && data.created_at.size() <= 64))
+        && (!('reviewed_at' in data) || (data.reviewed_at is string && data.reviewed_at.size() <= 64))
+        && (!('reviewed_by' in data) || (data.reviewed_by is string && data.reviewed_by.size() <= 256))
+        && (!('timestamp' in data) || data.timestamp is timestamp);
+    }
+
+    // Connection Health Check Collection
+    match /test/{docId} {
+      allow read: if true;
+      allow write: if false;
+    }
+
+    // Curriculum Collection (Public Read, Admin Write Only for Searsokvarkhim1@gmail.com)
+    match /curriculum/{topicId} {
+      allow read: if true;
+      allow write: if isAdminUser();
+    }
+
+    // Raw Knowledge Vault (Admin Read & Write for Searsokvarkhim1@gmail.com)
+    match /raw_knowledge/{unitId} {
+      allow read, write: if isAdminUser();
+    }
+
+    // Centralized Question Bank (Published Read for Students, Full Curation Access for Admin)
+    match /question_bank/{questionId} {
+      allow get: if isValidId(questionId) && (resource.data.is_published == true || isAdminUser());
+      allow list: if resource.data.is_published == true || isAdminUser();
+      allow create, update: if isAdminUser() && isValidId(questionId) && isValidQuestionBankItem(incoming());
+      allow delete: if isAdminUser() && isValidId(questionId);
+    }
+
+    // Payment Submissions Collection (Manual ACLEDA KHQR Uploads)
+    match /payment_submissions/{submissionId} {
+      allow get: if isValidId(submissionId) && (resource.data.user_id == request.auth.uid || isAdminUser());
+      allow list: if isSignedIn() && (resource.data.user_id == request.auth.uid || isAdminUser());
+      allow create: if isValidId(submissionId)
+        && isSignedIn()
+        && isValidPaymentSubmission(incoming())
+        && incoming().user_id == request.auth.uid;
+      allow update: if isValidId(submissionId) && isAdminUser() && isValidPaymentSubmission(incoming());
+      allow delete: if isValidId(submissionId) && isAdminUser();
+    }
+
+    // Users Collection (Strict PII Isolation & ABAC)
+    match /users/{userId} {
+      allow get: if (isOwner(userId) || isAdminUser()) && isValidId(userId);
+      allow list: if isAdminUser();
+      allow create: if isOwner(userId)
+        && isValidId(userId)
+        && isValidUserProfile(incoming())
+        && incoming().uid == request.auth.uid;
+      allow update: if (isOwner(userId) || isAdminUser())
+        && isValidId(userId)
+        && isValidUserProfile(incoming())
+        && incoming().uid == existing().uid
+        && incoming().diff(existing()).affectedKeys().hasOnly(['displayName', 'targetScore', 'isPremium', 'subscription_end_date', 'limmyAI_credits', 'updatedAt']);
+      allow delete: if (isOwner(userId) || isAdminUser()) && isValidId(userId);
+
+      // Subcollection: User Progress (Lesson completion, bookmarks)
+      match /progress/{progressId} {
+        allow get: if isOwner(userId) && isValidId(userId) && isValidId(progressId);
+        allow list: if isOwner(userId) && isValidId(userId);
+        allow create: if isOwner(userId)
+          && isValidId(userId)
+          && isValidId(progressId)
+          && isVerified()
+          && isValidUserProgress(incoming())
+          && incoming().userId == request.auth.uid;
+        allow update: if isOwner(userId)
+          && isValidId(userId)
+          && isValidId(progressId)
+          && isVerified()
+          && isValidUserProgress(incoming())
+          && incoming().userId == existing().userId
+          && incoming().diff(existing()).affectedKeys().hasOnly(['completedLessons', 'bookmarkedFormulas', 'totalStudyMinutes', 'lastActiveAt']);
+        allow delete: if isOwner(userId) && isValidId(userId) && isValidId(progressId);
+      }
+
+      // Subcollection: Exam Attempts (Protected practice exams)
+      match /attempts/{attemptId} {
+        allow get: if isOwner(userId) && isValidId(userId) && isValidId(attemptId);
+        allow list: if isOwner(userId) && isValidId(userId);
+        allow create: if isOwner(userId)
+          && isValidId(userId)
+          && isValidId(attemptId)
+          && isVerified()
+          && isValidExamAttempt(incoming())
+          && incoming().userId == request.auth.uid;
+        allow delete: if isOwner(userId) && isValidId(userId) && isValidId(attemptId);
+      }
+    }
+
+    // Practice Hub Mastery & Session Progress Collection (Owner Read/Write)
+    match /user_progress/{userId} {
+      allow get, list: if isOwner(userId) && isValidId(userId);
+      allow create, update: if isOwner(userId) && isValidId(userId);
+      allow delete: if isOwner(userId) && isValidId(userId);
+    }
+
+    // ABA PayWay KHQR Transactions Collection
+    match /transactions/{tranId} {
+      allow get: if isValidId(tranId) && (resource.data.userId == request.auth.uid || isAdminUser());
+      allow list: if isSignedIn() && (resource.data.userId == request.auth.uid || isAdminUser());
+      allow create: if isValidId(tranId) && (incoming().userId == request.auth.uid || !isSignedIn() || isAdminUser());
+      allow update: if isValidId(tranId) && (resource.data.userId == request.auth.uid || isAdminUser());
+      allow delete: if isAdminUser() && isValidId(tranId);
+    }
+  }
+}
+

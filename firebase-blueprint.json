@@ -1,0 +1,373 @@
+{
+  "entities": {
+    "UserProfile": {
+      "title": "UserProfile",
+      "description": "Student account profile and AP Precalculus study preferences",
+      "type": "object",
+      "properties": {
+        "uid": {
+          "type": "string",
+          "description": "Firebase Auth user ID",
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "email": {
+          "type": "string",
+          "description": "Student email address",
+          "maxLength": 256
+        },
+        "displayName": {
+          "type": "string",
+          "description": "Student display name",
+          "maxLength": 100
+        },
+        "targetScore": {
+          "type": "number",
+          "description": "Target AP exam score (1-5)"
+        },
+        "isPremium": {
+          "type": "boolean",
+          "description": "Whether the student has active AP Precalculus Premium subscription (unlocks Units 2-4, advanced FRQs, weakness remediation, and unlimited Limmy AI)"
+        },
+        "subscription_end_date": {
+          "type": "string",
+          "description": "ISO timestamp for when the monthly subscription expires"
+        },
+        "limmyAI_credits": {
+          "type": "number",
+          "description": "Remaining Limmy AI credits for free users (default 5, decremented by 1 per prompt; bypassed for Premium users)"
+        },
+        "createdAt": {
+          "type": "string",
+          "description": "Account registration timestamp"
+        },
+        "updatedAt": {
+          "type": "string",
+          "description": "Last update timestamp"
+        }
+      },
+      "required": ["uid", "email"]
+    },
+    "UserProgress": {
+      "title": "UserProgress",
+      "description": "Tracks completed AP Precalculus lessons and bookmarked formulas",
+      "type": "object",
+      "properties": {
+        "userId": {
+          "type": "string",
+          "description": "Owning user UID",
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "completedLessons": {
+          "type": "array",
+          "description": "List of completed lesson IDs"
+        },
+        "bookmarkedFormulas": {
+          "type": "array",
+          "description": "List of bookmarked formula IDs"
+        },
+        "totalStudyMinutes": {
+          "type": "number",
+          "description": "Total self-study minutes logged"
+        },
+        "lastActiveAt": {
+          "type": "string",
+          "description": "Last activity timestamp"
+        }
+      },
+      "required": ["userId"]
+    },
+    "ExamAttempt": {
+      "title": "ExamAttempt",
+      "description": "Protected practice exam attempts verified by user email verification",
+      "type": "object",
+      "properties": {
+        "userId": {
+          "type": "string",
+          "description": "Owning student UID",
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "examId": {
+          "type": "string",
+          "description": "ID of the unit or exam taken",
+          "maxLength": 64,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "score": {
+          "type": "number",
+          "description": "Number of correct questions"
+        },
+        "totalQuestions": {
+          "type": "number",
+          "description": "Total questions on the exam"
+        },
+        "percentage": {
+          "type": "number",
+          "description": "Calculated score percentage"
+        },
+        "completedAt": {
+          "type": "string",
+          "description": "Completion timestamp"
+        }
+      },
+      "required": ["userId", "examId", "score", "totalQuestions"]
+    },
+    "CurriculumItem": {
+      "title": "CurriculumItem",
+      "description": "AP Precalculus sub-unit master lesson, formulas, and practice question sets",
+      "type": "object",
+      "properties": {
+        "topicId": {
+          "type": "string",
+          "description": "Sub-topic identifier, e.g. topic_1_1",
+          "maxLength": 64,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "unitNumber": {
+          "type": "number",
+          "description": "Unit number (1-4)"
+        },
+        "title": {
+          "type": "string",
+          "description": "Topic title",
+          "maxLength": 150
+        },
+        "scope": {
+          "type": "string",
+          "description": "Scope of content",
+          "enum": ["master-lesson", "practice-set", "complete"]
+        },
+        "content": {
+          "type": "object",
+          "description": "JSON payload containing lesson or practice questions"
+        },
+        "updatedAt": {
+          "type": "string",
+          "description": "Last updated timestamp"
+        },
+        "updatedBy": {
+          "type": "string",
+          "description": "Admin email who created or updated"
+        }
+      },
+      "required": ["topicId", "unitNumber", "title", "content"]
+    },
+    "RawKnowledgeItem": {
+      "title": "RawKnowledgeItem",
+      "description": "Exhaustive raw notes extracted from NotebookLM or AP CED to ground Teacher Limmy synthesis",
+      "type": "object",
+      "properties": {
+        "unitId": {
+          "type": "string",
+          "description": "Unit identifier, e.g., unit_1, unit_2, unit_3, unit_4, unit_frq",
+          "maxLength": 64,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "unitTitle": {
+          "type": "string",
+          "description": "Human readable unit title",
+          "maxLength": 150
+        },
+        "rawContent": {
+          "type": "string",
+          "description": "Exhaustive raw text notes"
+        },
+        "charCount": {
+          "type": "number",
+          "description": "Length of raw content in characters"
+        },
+        "updatedAt": {
+          "type": "string",
+          "description": "Timestamp of upload"
+        },
+        "updatedBy": {
+          "type": "string",
+          "description": "Admin email"
+        }
+      },
+      "required": ["unitId", "rawContent"]
+    },
+    "QuestionBankItem": {
+      "title": "QuestionBankItem",
+      "description": "Centralized AP Precalculus MCQ or Multi-Part FRQ item in the Massive Question Bank",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique question identifier, e.g., qb_1_3_A_mcq_001",
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "unit_id": {
+          "type": "string",
+          "description": "Unit identifier, e.g., unit_1",
+          "maxLength": 32,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "topic_id": {
+          "type": "string",
+          "description": "Topic code, e.g., 1.3",
+          "maxLength": 16
+        },
+        "sub_topic_id": {
+          "type": "string",
+          "description": "Sub-topic identifier, e.g., 1.3.A",
+          "maxLength": 32
+        },
+        "sub_topic_title": {
+          "type": "string",
+          "description": "Sub-topic descriptive title",
+          "maxLength": 200
+        },
+        "type": {
+          "type": "string",
+          "description": "Question format type",
+          "enum": ["MCQ", "FRQ"]
+        },
+        "calculator_active": {
+          "type": "boolean",
+          "description": "Whether graphing calculator is allowed"
+        },
+        "difficulty": {
+          "type": "string",
+          "description": "Difficulty tier: Easy (Foundational math and direct formula use), Medium (Standard AP-level multi-step problems), Hard (Complex synthesis and score-5 level challenges)",
+          "enum": ["Easy", "Medium", "Hard", "Foundational", "AP Standard", "Challenge"]
+        },
+        "is_published": {
+          "type": "boolean",
+          "description": "Controls visibility on the student portal (true = live in student practice, false = stored in bank only)"
+        },
+        "content": {
+          "type": "object",
+          "description": "Question payload (MCQ prompt_latex/options/correct_index/explanation_latex/exam_trap or FRQ scenario_latex/parts)"
+        },
+        "created_at": {
+          "type": "string",
+          "description": "Creation timestamp"
+        }
+      },
+      "required": ["id", "unit_id", "topic_id", "sub_topic_id", "type", "calculator_active", "difficulty", "is_published", "content"]
+    },
+    "Transaction": {
+      "title": "Transaction",
+      "description": "ABA PayWay KHQR purchase transactions linking tran_id to student accounts",
+      "type": "object",
+      "properties": {
+        "tranId": {
+          "type": "string",
+          "description": "Unique 20-character transaction ID",
+          "maxLength": 64,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "userId": {
+          "type": "string",
+          "description": "Owning student UID",
+          "maxLength": 128
+        },
+        "userEmail": {
+          "type": "string",
+          "description": "Student email address",
+          "maxLength": 256
+        },
+        "amount": {
+          "type": "string",
+          "description": "Payment amount in USD",
+          "maxLength": 32
+        },
+        "status": {
+          "type": "string",
+          "description": "Payment status (PENDING, PAID, FAILED)",
+          "maxLength": 32
+        },
+        "createdAt": {
+          "type": "string",
+          "description": "Transaction creation timestamp"
+        },
+        "updatedAt": {
+          "type": "string",
+          "description": "Last update timestamp"
+        }
+      },
+      "required": ["tranId", "status"]
+    },
+    "PaymentSubmission": {
+      "title": "PaymentSubmission",
+      "description": "Manual ACLEDA KHQR payment screenshot submission requiring admin approval",
+      "type": "object",
+      "properties": {
+        "user_id": {
+          "type": "string",
+          "description": "Owning student UID",
+          "maxLength": 128
+        },
+        "user_email": {
+          "type": "string",
+          "description": "Student email address",
+          "maxLength": 256
+        },
+        "screenshot_url": {
+          "type": "string",
+          "description": "Uploaded payment screenshot image URL or base64 data URI"
+        },
+        "status": {
+          "type": "string",
+          "description": "Submission status (pending, approved, rejected)",
+          "enum": ["pending", "approved", "rejected"]
+        },
+        "amount": {
+          "type": "string",
+          "description": "Payment amount string, e.g. 10.00 USD"
+        },
+        "created_at": {
+          "type": "string",
+          "description": "Submission timestamp"
+        },
+        "reviewed_at": {
+          "type": "string",
+          "description": "Admin review timestamp"
+        },
+        "reviewed_by": {
+          "type": "string",
+          "description": "Admin email who reviewed submission"
+        }
+      },
+      "required": ["user_id", "user_email", "screenshot_url", "status", "created_at"]
+    }
+  },
+  "firestore": {
+    "/payment_submissions/{submissionId}": {
+      "schema": "PaymentSubmission",
+      "description": "Manual ACLEDA KHQR payment screenshot submissions requiring approval by Searsokvarkhim1@gmail.com"
+    },
+    "/transactions/{tranId}": {
+      "schema": "Transaction",
+      "description": "ABA PayWay purchase orders and payment confirmations linking tran_id to user accounts"
+    },
+    "/curriculum/{topicId}": {
+      "schema": "CurriculumItem",
+      "description": "Curriculum documents managed exclusively by Searsokvarkhim1@gmail.com and readable by all students"
+    },
+    "/raw_knowledge/{unitId}": {
+      "schema": "RawKnowledgeItem",
+      "description": "Raw reference knowledge per unit stored by Searsokvarkhim1@gmail.com to ground AI curriculum synthesis"
+    },
+    "/question_bank/{questionId}": {
+      "schema": "QuestionBankItem",
+      "description": "Centralized AP Precalculus question bank managed by Searsokvarkhim1@gmail.com; published items readable by students"
+    },
+    "/users/{userId}": {
+      "schema": "UserProfile",
+      "description": "Private student profile data accessible only by the owner"
+    },
+    "/users/{userId}/progress/{progressId}": {
+      "schema": "UserProgress",
+      "description": "Student's lesson completion state and formula bookmarks"
+    },
+    "/users/{userId}/attempts/{attemptId}": {
+      "schema": "ExamAttempt",
+      "description": "Protected practice exam attempts verified by user email verification"
+    }
+  }
+}

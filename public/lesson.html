@@ -1,0 +1,595 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>AP Precalculus Lesson Guide — Teacher Limmy</title>
+    <meta name="description" content="AP Precalculus comprehensive study guides with interactive Teacher Limmy AI lesson guidance and KaTeX math." />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css" crossorigin="anonymous" />
+    <link rel="stylesheet" href="/styles.css" />
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js" crossorigin="anonymous"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js" crossorigin="anonymous"></script>
+    <style>
+      body {
+        font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
+      }
+      .font-mono {
+        font-family: 'JetBrains Mono', monospace;
+      }
+      .math-content .katex-display {
+        margin: 0.75rem 0;
+        overflow-x: auto;
+        overflow-y: hidden;
+        padding: 0.25rem 0;
+      }
+    </style>
+  </head>
+  <body class="bg-slate-50 text-slate-900 min-h-screen flex flex-col antialiased selection:bg-blue-600 selection:text-white">
+
+    <!-- Top Navigation Bar -->
+    <header class="sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-slate-200 px-4 sm:px-6 h-16 flex items-center justify-between gap-4">
+      <div class="flex items-center gap-3 min-w-0">
+        <a
+          href="/"
+          class="inline-flex items-center gap-1.5 text-xs sm:text-sm font-bold text-slate-700 hover:text-blue-600 transition-colors shrink-0"
+        >
+          <span>‹</span>
+          <span>Back to Hub</span>
+        </a>
+
+        <div class="h-4 w-px bg-slate-200"></div>
+
+        <!-- Topic Selector Dropdown -->
+        <div class="flex items-center gap-2 min-w-0">
+          <label for="lesson-topic-select" class="text-xs font-bold text-slate-500 hidden sm:inline shrink-0">
+            Topic:
+          </label>
+          <select
+            id="lesson-topic-select"
+            class="text-xs font-bold text-slate-800 bg-slate-100 hover:bg-slate-200/80 border border-slate-300 rounded-lg px-2.5 py-1.5 focus:outline-none focus:ring-2 focus:ring-blue-600 max-w-[240px] sm:max-w-xs truncate cursor-pointer transition-colors"
+          >
+            <!-- Populated dynamically with all 44 topics -->
+          </select>
+        </div>
+      </div>
+
+      <!-- Right Action Controls -->
+      <div class="flex items-center gap-2 shrink-0">
+        <button
+          type="button"
+          onclick="window.openCalculatorModal()"
+          class="hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-xs font-bold text-slate-700 transition-colors cursor-pointer shadow-2xs"
+          title="Open TI-84 Plus CE / Desmos Calculator"
+        >
+          <span>🧮</span>
+          <span>Calculator</span>
+        </button>
+
+        <!-- Ask Teacher Limmy Header Toggle Button -->
+        <button
+          id="btn-toggle-tutor-drawer"
+          type="button"
+          onclick="window.toggleTutorDrawer()"
+          class="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-xs font-bold bg-indigo-600 hover:bg-indigo-700 text-white shadow-xs transition-all cursor-pointer"
+          title="Open Teacher Limmy Lesson Guidance Side-Drawer"
+        >
+          <span class="text-sm">🧑‍🏫</span>
+          <span>Ask Teacher Limmy</span>
+          <span id="tutor-header-pill" class="text-[10px] bg-indigo-500 px-1.5 py-0.2 rounded font-mono hidden">Active</span>
+        </button>
+      </div>
+    </header>
+
+    <!-- Main Workspace Container (Lesson Reader Pane + Docked Side-Drawer) -->
+    <div class="flex-1 flex overflow-hidden relative">
+
+      <!-- Left / Center: Scrollable Lesson Reader Pane -->
+      <main id="lesson-reader-pane" class="flex-1 overflow-y-auto p-4 sm:p-8 space-y-8 bg-white min-w-0">
+        <div class="max-w-4xl mx-auto space-y-8" id="lesson-module-container">
+          <!-- Lesson Module Content Rendered Here -->
+          <div class="p-8 text-center text-sm text-slate-500 animate-pulse">
+            Loading AP Precalculus Study Guide...
+          </div>
+        </div>
+      </main>
+
+      <!-- Right: Docked Teacher Limmy Lesson Guidance Side-Drawer -->
+      <aside
+        id="tutor-side-drawer"
+        class="hidden w-full sm:w-[420px] bg-slate-50 border-l border-slate-200 flex flex-col shrink-0 shadow-2xl z-30 transition-all"
+      >
+        <!-- Drawer Header -->
+        <div class="p-4 bg-slate-900 text-white flex items-center justify-between gap-3 shrink-0 border-b border-slate-800">
+          <div class="flex items-center gap-2.5">
+            <div class="w-8 h-8 rounded-xl bg-gradient-to-br from-indigo-500 to-blue-600 flex items-center justify-center text-sm shadow-xs">
+              🧑‍🏫
+            </div>
+            <div>
+              <div class="text-xs font-extrabold uppercase tracking-wider text-white">
+                Teacher Limmy • Lesson Guidance
+              </div>
+              <div class="text-[11px] text-blue-300 font-mono" id="tutor-drawer-topic-label">
+                Topic 1.1: Change in Tandem
+              </div>
+            </div>
+          </div>
+          <button
+            type="button"
+            onclick="window.toggleTutorDrawer(false)"
+            class="text-slate-400 hover:text-white p-1 rounded hover:bg-slate-800 cursor-pointer text-sm transition-colors"
+            aria-label="Close drawer"
+          >
+            ✕
+          </button>
+        </div>
+
+        <!-- Telemetry Status Strip -->
+        <div class="px-4 py-2 bg-indigo-50 border-b border-indigo-100 flex items-center justify-between text-xs text-indigo-950 shrink-0">
+          <span class="flex items-center gap-1.5 font-semibold">
+            <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+            <span>Live Screen Telemetry Captured</span>
+          </span>
+          <span class="text-[10px] font-mono text-indigo-700 bg-white px-2 py-0.5 rounded border border-indigo-200">
+            request_type: LESSON_GUIDANCE
+          </span>
+        </div>
+
+        <!-- Quick Prompt Chips -->
+        <div class="p-3 bg-white border-b border-slate-100 flex items-center gap-1.5 overflow-x-auto text-[11px] shrink-0">
+          <button
+            type="button"
+            onclick="window.askQuickPrompt('Can you explain this formula in simple words?')"
+            class="px-2.5 py-1 rounded-full bg-slate-100 hover:bg-indigo-50 hover:text-indigo-700 text-slate-700 font-semibold border border-slate-200 shrink-0 cursor-pointer transition-colors"
+          >
+            💡 Explain formula
+          </button>
+          <button
+            type="button"
+            onclick="window.askQuickPrompt('What does this mean in plain English?')"
+            class="px-2.5 py-1 rounded-full bg-slate-100 hover:bg-indigo-50 hover:text-indigo-700 text-slate-700 font-semibold border border-slate-200 shrink-0 cursor-pointer transition-colors"
+          >
+            🔍 What does this mean?
+          </button>
+          <button
+            type="button"
+            onclick="window.askQuickPrompt('Can you give me a simple real-world analogy for this?')"
+            class="px-2.5 py-1 rounded-full bg-slate-100 hover:bg-indigo-50 hover:text-indigo-700 text-slate-700 font-semibold border border-slate-200 shrink-0 cursor-pointer transition-colors"
+          >
+            🚗 Real-world analogy
+          </button>
+          <button
+            type="button"
+            onclick="window.askQuickPrompt('What is a common AP exam mistake on this topic?')"
+            class="px-2.5 py-1 rounded-full bg-slate-100 hover:bg-indigo-50 hover:text-indigo-700 text-slate-700 font-semibold border border-slate-200 shrink-0 cursor-pointer transition-colors"
+          >
+            ⚠️ AP exam traps
+          </button>
+        </div>
+
+        <!-- Chat Messages Feed -->
+        <div class="flex-1 overflow-y-auto p-4 space-y-3.5" id="tutor-chat-feed">
+          <!-- Messages populated dynamically -->
+        </div>
+
+        <!-- Chat Input Form -->
+        <form
+          id="tutor-chat-form"
+          onsubmit="event.preventDefault(); window.submitTutorQuestion();"
+          class="p-3 bg-white border-t border-slate-200 flex items-center gap-2 shrink-0"
+        >
+          <input
+            type="text"
+            id="tutor-chat-input"
+            placeholder="Ask Limmy about this lesson (e.g., 'Can you explain this formula?')..."
+            class="flex-1 bg-slate-50 border border-slate-300 rounded-xl px-3.5 py-2 text-xs sm:text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-600 focus:bg-white"
+          />
+          <button
+            type="submit"
+            id="tutor-chat-submit-btn"
+            class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-xl shadow-xs transition-colors cursor-pointer shrink-0"
+          >
+            Send
+          </button>
+        </form>
+      </aside>
+
+    </div>
+
+    <!-- Floating "Ask Teacher Limmy" Mascot Button (Visible when side-drawer is closed) -->
+    <div id="floating-tutor-btn-container" class="fixed bottom-6 right-6 z-40">
+      <button
+        type="button"
+        onclick="window.toggleTutorDrawer(true)"
+        class="flex items-center gap-2.5 px-4 py-3 bg-gradient-to-r from-indigo-600 via-blue-600 to-indigo-700 hover:from-indigo-700 hover:to-blue-700 text-white rounded-full shadow-xl hover:shadow-2xl transition-all cursor-pointer border border-white/20 active:scale-95 animate-fade-in"
+      >
+        <div class="w-6 h-6 rounded-full bg-white/20 flex items-center justify-center text-sm">
+          🧑‍🏫
+        </div>
+        <span class="text-xs font-bold tracking-wide">Ask Teacher Limmy</span>
+        <span class="text-[10px] bg-white/20 px-1.5 py-0.5 rounded-full font-medium">Lesson Help</span>
+      </button>
+    </div>
+
+    <script>
+      (function () {
+        'use strict';
+
+        let currentTopicId = '1.1';
+        let currentTopicData = null;
+        let allTopicsCache = [];
+        let tutorMessages = [
+          {
+            role: 'assistant',
+            content: 'Hello! I am Teacher Limmy, your AP Precalculus study mentor. Ask me anything about the concept, formulas, or steps in this lesson!'
+          }
+        ];
+        let isDrawerOpen = false;
+        let isSending = false;
+
+        // Extract topic parameter from URL (?topic=1.3)
+        const urlParams = new URLSearchParams(window.location.search);
+        const paramTopic = urlParams.get('topic');
+        if (paramTopic) {
+          currentTopicId = paramTopic.trim();
+        }
+
+        // Render math in element with KaTeX
+        function renderLatex(el) {
+          if (!el || typeof renderMathInElement !== 'function') return;
+          try {
+            renderMathInElement(el, {
+              delimiters: [
+                { left: '$$', right: '$$', display: true },
+                { left: '$', right: '$', display: false },
+                { left: '\\[', right: '\\]', display: true },
+                { left: '\\(', right: '\\)', display: false }
+              ],
+              throwOnError: false
+            });
+          } catch (e) {
+            console.warn('KaTeX render note:', e);
+          }
+        }
+
+        function escapeHtml(str) {
+          if (!str) return '';
+          return String(str)
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#39;');
+        }
+
+        // Format math text preserving $...$ and $$...$$
+        function formatMath(text) {
+          if (!text) return '';
+          return escapeHtml(text)
+            .replace(/\n\n/g, '<br/><br/>')
+            .replace(/\n/g, '<br/>');
+        }
+
+        // Initialize topic select and load data
+        async function init() {
+          try {
+            const res = await fetch('/data/premade_curriculum_all_44.json');
+            if (res.ok) {
+              const data = await res.json();
+              allTopicsCache = data.topics || [];
+            }
+          } catch (err) {
+            console.warn('Could not load premade curriculum dataset:', err);
+          }
+
+          populateTopicSelect();
+          loadTopic(currentTopicId);
+        }
+
+        function populateTopicSelect() {
+          const select = document.getElementById('lesson-topic-select');
+          if (!select) return;
+          select.innerHTML = '';
+
+          allTopicsCache.forEach((t) => {
+            const opt = document.createElement('option');
+            opt.value = t.topic_id;
+            opt.textContent = `Topic ${t.topic_id}: ${t.topic_title || ''}`;
+            if (String(t.topic_id) === String(currentTopicId)) {
+              opt.selected = true;
+            }
+            select.appendChild(opt);
+          });
+
+          select.addEventListener('change', (e) => {
+            const val = e.target.value;
+            loadTopic(val);
+            const newUrl = new URL(window.location);
+            newUrl.searchParams.set('topic', val);
+            window.history.replaceState({}, '', newUrl);
+          });
+        }
+
+        function loadTopic(topicId) {
+          currentTopicId = topicId;
+          const found = allTopicsCache.find((t) => String(t.topic_id) === String(topicId));
+          if (found) {
+            currentTopicData = found;
+            renderLesson(found);
+          } else {
+            // Fallback skeleton
+            renderLesson({
+              topic_id: topicId,
+              topic_title: `Topic ${topicId}`,
+              lesson: {
+                concept_description: `Overview of Topic ${topicId} in the College Board AP Precalculus curriculum.`,
+                core_formula: `$$f(x)$$`,
+                simple_explanation: `Key mechanics and graphical interpretations for Topic ${topicId}.`
+              }
+            });
+          }
+
+          const label = document.getElementById('tutor-drawer-topic-label');
+          if (label) {
+            label.textContent = `Topic ${topicId}: ${currentTopicData?.topic_title || ''}`;
+          }
+        }
+
+        function renderLesson(data) {
+          const container = document.getElementById('lesson-module-container');
+          if (!container) return;
+
+          const lesson = data.lesson || {};
+          const readingMins = lesson.reading_time_minutes || 5;
+          const conceptDesc = lesson.concept_description || data.summary || '';
+          const coreFormula = lesson.core_formula || '';
+          const simpleExplanation = lesson.simple_explanation || '';
+          const formulas = data.formula_sheet?.sub_topics || [];
+
+          container.innerHTML = `
+            <!-- Chapter Banner -->
+            <div class="p-6 rounded-3xl bg-slate-900 text-white border border-slate-800 shadow-sm space-y-3">
+              <div class="flex flex-wrap items-center justify-between gap-2">
+                <span class="text-xs font-mono font-bold uppercase tracking-widest text-blue-300">
+                  AP Precalculus Study Guide · Topic ${escapeHtml(data.topic_id)}
+                </span>
+                <span class="text-[11px] font-semibold bg-emerald-500/20 text-emerald-200 border border-emerald-400/30 px-2.5 py-0.5 rounded-full">
+                  ⏱️ ${readingMins} Min Guide
+                </span>
+              </div>
+              <h1 class="text-xl sm:text-2xl font-extrabold text-white">
+                Topic ${escapeHtml(data.topic_id)}: ${escapeHtml(data.topic_title || '')}
+              </h1>
+              <p class="text-xs sm:text-sm text-slate-300 leading-relaxed">
+                Master the core mechanics, formulas, and high-school friendly analogies aligned with the AP Precalculus Course and Exam Description.
+              </p>
+            </div>
+
+            <!-- SECTION 1: Concept Description -->
+            <section class="bg-white rounded-2xl border border-slate-200 shadow-2xs overflow-hidden" id="module-sec-concept">
+              <div class="px-6 py-4 bg-slate-50 border-b border-slate-200 flex items-center justify-between">
+                <div class="flex items-center gap-2.5">
+                  <span class="w-7 h-7 rounded-lg bg-blue-600 text-white font-mono text-xs font-bold flex items-center justify-center">1</span>
+                  <h2 class="text-base font-bold text-slate-900">Concept Description</h2>
+                </div>
+                <span class="text-[11px] font-mono text-slate-500 bg-white px-2 py-0.5 rounded border border-slate-200">Core Foundations</span>
+              </div>
+              <div class="p-6 text-sm text-slate-800 leading-relaxed math-content">
+                ${formatMath(conceptDesc)}
+              </div>
+            </section>
+
+            <!-- SECTION 2: Core Formula -->
+            <section class="bg-white rounded-2xl border border-slate-200 shadow-2xs overflow-hidden" id="module-sec-formula">
+              <div class="px-6 py-4 bg-slate-50 border-b border-slate-200 flex items-center justify-between">
+                <div class="flex items-center gap-2.5">
+                  <span class="w-7 h-7 rounded-lg bg-indigo-600 text-white font-mono text-xs font-bold flex items-center justify-center">2</span>
+                  <h2 class="text-base font-bold text-slate-900">Core Formula</h2>
+                </div>
+                <span class="text-[11px] font-mono text-slate-500 bg-white px-2 py-0.5 rounded border border-slate-200">Essential Equations</span>
+              </div>
+              <div class="p-6 text-sm text-slate-800 leading-relaxed math-content bg-indigo-50/20">
+                ${formatMath(coreFormula)}
+              </div>
+            </section>
+
+            <!-- SECTION 3: Simple Explanation -->
+            <section class="bg-white rounded-2xl border border-slate-200 shadow-2xs overflow-hidden" id="module-sec-explanation">
+              <div class="px-6 py-4 bg-slate-50 border-b border-slate-200 flex items-center justify-between">
+                <div class="flex items-center gap-2.5">
+                  <span class="w-7 h-7 rounded-lg bg-emerald-600 text-white font-mono text-xs font-bold flex items-center justify-center">3</span>
+                  <h2 class="text-base font-bold text-slate-900">Simple Explanation</h2>
+                </div>
+                <span class="text-[11px] font-mono text-slate-500 bg-white px-2 py-0.5 rounded border border-slate-200">Intuitive Mechanics</span>
+              </div>
+              <div class="p-6 text-sm text-slate-800 leading-relaxed math-content">
+                ${formatMath(simpleExplanation)}
+              </div>
+            </section>
+
+            <!-- Sub-Topic Formulas Vault -->
+            ${formulas.length > 0 ? `
+              <section class="space-y-4 pt-2">
+                <div class="border-b border-slate-200 pb-2">
+                  <h3 class="text-sm font-bold text-slate-900">📐 Sub-Topic Formula Vault</h3>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  ${formulas.map(st => `
+                    <div class="p-4 rounded-xl border border-slate-200 bg-slate-50/70 space-y-2">
+                      <div class="text-xs font-bold text-indigo-700">${escapeHtml(st.sub_topic_id)} • ${escapeHtml(st.sub_topic_title || '')}</div>
+                      ${(st.essential_formulas || []).map(ef => `
+                        <div class="p-3 bg-white rounded-lg border border-slate-200 space-y-1">
+                          <div class="text-xs font-semibold text-slate-900">${escapeHtml(ef.name)}</div>
+                          <div class="text-xs font-mono text-center text-blue-700 math-content overflow-x-auto">$$${escapeHtml(ef.latex)}$$</div>
+                          <div class="text-[11px] text-slate-600 math-content">${formatMath(ef.description)}</div>
+                        </div>
+                      `).join('')}
+                    </div>
+                  `).join('')}
+                </div>
+              </section>
+            ` : ''}
+          `;
+
+          renderLatex(container);
+        }
+
+        // Toggle Tutor Side-Drawer
+        window.toggleTutorDrawer = function (explicitState) {
+          isDrawerOpen = explicitState !== undefined ? explicitState : !isDrawerOpen;
+          const drawer = document.getElementById('tutor-side-drawer');
+          const floatingBtn = document.getElementById('floating-tutor-btn-container');
+          const headerPill = document.getElementById('tutor-header-pill');
+
+          if (drawer) {
+            drawer.classList.toggle('hidden', !isDrawerOpen);
+          }
+          if (floatingBtn) {
+            floatingBtn.classList.toggle('hidden', isDrawerOpen);
+          }
+          if (headerPill) {
+            headerPill.classList.toggle('hidden', !isDrawerOpen);
+          }
+
+          if (isDrawerOpen) {
+            renderTutorMessages();
+            setTimeout(() => {
+              const input = document.getElementById('tutor-chat-input');
+              if (input) input.focus();
+            }, 100);
+          }
+        };
+
+        function renderTutorMessages() {
+          const feed = document.getElementById('tutor-chat-feed');
+          if (!feed) return;
+
+          feed.innerHTML = tutorMessages.map((m) => {
+            if (m.role === 'user') {
+              return `
+                <div class="flex justify-end">
+                  <div class="max-w-[85%] rounded-2xl rounded-tr-xs bg-indigo-600 text-white px-3.5 py-2 text-xs leading-relaxed shadow-2xs">
+                    ${escapeHtml(m.content)}
+                  </div>
+                </div>
+              `;
+            }
+            return `
+              <div class="flex items-start gap-2.5">
+                <div class="w-7 h-7 rounded-lg bg-gradient-to-br from-indigo-600 to-blue-600 text-white flex items-center justify-center text-xs font-bold shrink-0 shadow-2xs">
+                  🧑‍🏫
+                </div>
+                <div class="flex-1 bg-white border border-slate-200 rounded-2xl rounded-tl-xs p-3.5 shadow-2xs space-y-1.5">
+                  <div class="text-[10px] font-extrabold uppercase tracking-wider text-indigo-700">
+                    Teacher Limmy
+                  </div>
+                  <div class="text-xs text-slate-800 leading-relaxed math-content">
+                    ${formatMath(m.content)}
+                  </div>
+                </div>
+              </div>
+            `;
+          }).join('');
+
+          renderLatex(feed);
+          feed.scrollTop = feed.scrollHeight;
+        }
+
+        window.askQuickPrompt = function (promptText) {
+          window.toggleTutorDrawer(true);
+          const input = document.getElementById('tutor-chat-input');
+          if (input) input.value = promptText;
+          window.submitTutorQuestion();
+        };
+
+        // Capture Exact Telemetry and Post to /api/tutor
+        window.submitTutorQuestion = async function () {
+          if (isSending) return;
+          const input = document.getElementById('tutor-chat-input');
+          const submitBtn = document.getElementById('tutor-chat-submit-btn');
+          if (!input) return;
+
+          const questionText = input.value.trim();
+          if (!questionText) return;
+
+          input.value = '';
+          isSending = true;
+          if (submitBtn) submitBtn.disabled = true;
+
+          // Append student user message
+          tutorMessages.push({ role: 'user', content: questionText });
+          renderTutorMessages();
+
+          // 1. CAPTURE LESSON TELEMETRY FROM RENDERED SCREEN
+          const topicTitle = `Topic ${currentTopicId}: ${currentTopicData?.topic_title || ''}`;
+          const readerEl = document.getElementById('lesson-module-container');
+          const renderedLessonText = readerEl ? readerEl.innerText || '' : '';
+
+          const historyPayload = tutorMessages.slice(-6).map((m) => ({
+            role: m.role,
+            content: m.content
+          }));
+
+          const feed = document.getElementById('tutor-chat-feed');
+          const loadingDiv = document.createElement('div');
+          loadingDiv.id = 'tutor-loading-indicator';
+          loadingDiv.className = 'flex items-center gap-2 p-3 bg-indigo-50 border border-indigo-100 rounded-xl text-xs text-indigo-800 animate-pulse';
+          loadingDiv.innerHTML = `<span>🧑‍🏫</span> <span>Teacher Limmy is inspecting the lesson text and preparing guidance...</span>`;
+          if (feed) {
+            feed.appendChild(loadingDiv);
+            feed.scrollTop = feed.scrollHeight;
+          }
+
+          try {
+            // POST to /api/tutor with request_type: "LESSON_GUIDANCE"
+            const response = await fetch('/api/tutor', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                request_type: 'LESSON_GUIDANCE',
+                topic_title: topicTitle,
+                lesson_content: renderedLessonText,
+                student_question: questionText,
+                history: historyPayload
+              })
+            });
+
+            const loadingEl = document.getElementById('tutor-loading-indicator');
+            if (loadingEl) loadingEl.remove();
+
+            const data = await response.json();
+            const reply = data.reply || "Let's review this formula together: what are the input and output values given in the problem?";
+
+            tutorMessages.push({ role: 'assistant', content: reply });
+            renderTutorMessages();
+          } catch (err) {
+            console.error('Error in lesson guidance request:', err);
+            const loadingEl = document.getElementById('tutor-loading-indicator');
+            if (loadingEl) loadingEl.remove();
+
+            tutorMessages.push({
+              role: 'assistant',
+              content: "I ran into a temporary connection issue. Take a look at the formula card on your screen: what are the given values for the input and output?"
+            });
+            renderTutorMessages();
+          } finally {
+            isSending = false;
+            if (submitBtn) submitBtn.disabled = false;
+          }
+        };
+
+        window.openCalculatorModal = function () {
+          window.location.hash = '#/practice';
+          setTimeout(() => {
+            if (window.openTi84Calculator) window.openTi84Calculator();
+          }, 300);
+        };
+
+        // Initialize on DOM load
+        document.addEventListener('DOMContentLoaded', init);
+      })();
+    </script>
+  </body>
+</html>

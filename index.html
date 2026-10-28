@@ -1,0 +1,1495 @@
+<!doctype html>
+<html lang="en" class="max-w-full overflow-x-hidden">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0" />
+    <title>MathPrep - AP Precalculus Study Platform</title>
+    <meta name="description" content="Comprehensive AP Precalculus study platform featuring structured lessons, comprehensive study guides, searchable formula bank, and exam practice for all four College Board units." />
+    <meta property="og:title" content="MathPrep - AP Precalculus Study Platform" />
+    <meta property="og:description" content="Comprehensive AP Precalculus study platform featuring structured lessons, comprehensive study guides, searchable formula bank, and exam practice for all four College Board units." />
+    <meta property="og:type" content="website" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:ital,wght@0,400;0,500;0,600;1,400&family=Plus+Jakarta+Sans:ital,wght@0,400;0,500;0,600;0,700;1,400&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css" crossorigin="anonymous" />
+    <link rel="stylesheet" href="/styles.css" />
+    <!-- Markdown Parser (marked) -->
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <!-- KaTeX and Auto-Render Extension -->
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js" crossorigin="anonymous"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js" crossorigin="anonymous"></script>
+    <!-- Firebase App, Auth & Firestore Compat SDKs -->
+    <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+    <script>
+      window.firebaseConfig = {
+        projectId: "resolute-dialect-ns7sz",
+        appId: "1:867238495850:web:1e73ace9f74306bf9cec13",
+        apiKey: "AIzaSyAY5HabqmUxnkUY3z4W9g7upzbWIZe_MzU",
+        authDomain: "resolute-dialect-ns7sz.firebaseapp.com",
+        storageBucket: "resolute-dialect-ns7sz.firebasestorage.app",
+        messagingSenderId: "867238495850",
+        firestoreDatabaseId: "ai-studio-mathprepapprecal-6d188591-6b33-4318-b288-3e07c81cc172"
+      };
+    </script>
+  </head>
+  <body class="bg-slate-50 text-slate-900 antialiased selection:bg-blue-600 selection:text-white max-w-full overflow-x-hidden min-h-screen">
+    <div id="root" class="max-w-full overflow-x-hidden"></div>
+
+    <!-- Dedicated Teacher Limmy Admin Studio (Two-Column Desktop Dashboard) -->
+    <section id="admin-studio" class="hidden min-h-screen bg-slate-100/80 border-t border-slate-200 max-w-full overflow-x-hidden">
+      <div class="max-w-[1720px] w-full mx-auto px-3 sm:px-6 py-4 sm:py-5 space-y-4 max-w-full overflow-x-hidden">
+        
+        <!-- Top Command Bar with View Switcher -->
+        <div class="bg-white rounded-2xl border border-slate-200 px-5 py-3.5 shadow-xs flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+          <div class="flex items-center gap-3">
+            <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-600 via-indigo-600 to-violet-700 text-white flex items-center justify-center font-bold text-base shadow-xs">
+              TL
+            </div>
+            <div>
+              <div class="flex items-center gap-2">
+                <h1 class="text-lg font-bold text-slate-900 tracking-tight">Teacher Limmy Admin Studio</h1>
+                <span class="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold bg-amber-100 text-amber-900 border border-amber-200">
+                  Curriculum Architect
+                </span>
+                <span id="teacher-limmy-stats-badge" class="hidden sm:inline-flex items-center px-2 py-0.5 rounded text-[10px] font-mono font-semibold bg-slate-100 text-slate-700 border border-slate-200">
+                  4 Units · 44 Topics
+                </span>
+              </div>
+              <p class="text-xs text-slate-500">
+                Authoritative AP Precalculus AI Agent & Live Student Preview for <span class="font-mono text-slate-700 font-semibold">Searsokvarkhim1@gmail.com</span>
+              </p>
+            </div>
+          </div>
+
+          <div class="flex flex-wrap items-center gap-2.5">
+            <!-- Prominent Bulk Pre-Made Curriculum Trigger (Requirement 4) -->
+            <button
+              id="btn-generate-full-curriculum"
+              type="button"
+              onclick="window.generateFullPremadeCurriculum()"
+              class="px-3.5 py-2 bg-gradient-to-r from-indigo-600 via-blue-600 to-emerald-600 hover:from-indigo-700 hover:via-blue-700 hover:to-emerald-700 text-white font-bold text-xs rounded-xl shadow-sm transition-all flex items-center gap-1.5 cursor-pointer border border-indigo-500/30"
+              title="Synthesize and stage exhaustive College Board lessons, formula sheets, MCQs, and FRQs across all 44 AP Precalculus topics"
+            >
+              <span>📚 Generate Full Pre-Made Curriculum (All Topics: Lessons, Formulas, MCQ, & FRQ)</span>
+            </button>
+
+            <button
+              id="btn-publish-full-curriculum"
+              type="button"
+              onclick="window.publishFullPremadeCurriculum()"
+              class="hidden px-3.5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-xl shadow-sm transition-all items-center gap-1.5 cursor-pointer animate-pulse"
+              title="Batch commit all 44 staged AP Precalculus topics directly to Cloud Firestore"
+            >
+              <span>✅ Publish All 44 Staged Topics to Firestore</span>
+            </button>
+
+            <!-- Studio vs Question Bank Hub vs Raw Knowledge Vault Mode Switcher -->
+            <div class="flex items-center gap-1.5 bg-slate-100 p-1 rounded-xl border border-slate-200 shadow-2xs">
+              <button
+                id="btn-admin-view-studio"
+                type="button"
+                onclick="window.switchAdminView('studio')"
+                class="mode-tab-btn active"
+              >
+                <span>⚡ AI Studio & Preview</span>
+              </button>
+              <button
+                id="btn-admin-view-bank"
+                type="button"
+                onclick="window.switchAdminView('bank')"
+                class="mode-tab-btn"
+              >
+                <span>🏦 Question Bank Hub</span>
+              </button>
+              <button
+                id="btn-admin-view-vault"
+                type="button"
+                onclick="window.switchAdminView('vault')"
+                class="mode-tab-btn"
+              >
+                <span>📚 Raw Knowledge Vault</span>
+              </button>
+              <button
+                id="btn-admin-view-payments"
+                type="button"
+                onclick="window.switchAdminView('payments')"
+                class="mode-tab-btn"
+              >
+                <span>💳 Payment Approvals</span>
+              </button>
+            </div>
+
+            <button
+              onclick="window.location.hash = '';"
+              class="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-slate-700 bg-slate-100 hover:bg-slate-200/80 rounded-lg transition-colors cursor-pointer"
+            >
+              <span>← Exit to Student Hub</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- VIEW 1: TWO-COLUMN STUDIO WORKSPACE (Default) -->
+        <div id="admin-view-studio" class="teacher-limmy-dashboard">
+          
+          <!-- LEFT PANEL: Teacher Limmy AI Chat & Command Center -->
+          <div class="chat-command-panel">
+            
+            <!-- Target Selector Header -->
+            <div class="p-3.5 border-b border-slate-200 bg-slate-50/90 flex flex-col gap-2.5">
+              <div class="flex items-center justify-between">
+                <span class="text-xs font-bold text-slate-700 flex items-center gap-1.5">
+                  <span>🎯 Target Sub-Unit:</span>
+                </span>
+                
+                <!-- Grounding Vault Indicator Pill -->
+                <button
+                  id="vault-grounding-indicator"
+                  type="button"
+                  onclick="window.switchAdminView('vault')"
+                  class="px-2.5 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-50 text-emerald-800 border border-emerald-200/80 flex items-center gap-1 cursor-pointer hover:bg-emerald-100 transition-colors"
+                  title="Click to view or edit raw reference notes for this unit"
+                >
+                  <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+                  <span id="vault-grounding-text">Vault Grounded</span>
+                </button>
+              </div>
+
+              <div class="grid grid-cols-12 gap-2">
+                <div class="col-span-5">
+                  <select
+                    id="teacher-limmy-unit-select"
+                    class="w-full text-xs bg-white border border-slate-300 rounded-lg p-2 font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-600 cursor-pointer shadow-2xs"
+                  >
+                    <option value="1">Unit 1: Polynomial & Rational</option>
+                    <option value="2">Unit 2: Exponential & Log</option>
+                    <option value="3">Unit 3: Trigonometric & Polar</option>
+                    <option value="4">Unit 4: Vectors & Matrices</option>
+                  </select>
+                </div>
+                <div class="col-span-7">
+                  <select
+                    id="teacher-limmy-topic-select"
+                    class="w-full text-xs bg-white border border-slate-300 rounded-lg p-2 font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-600 cursor-pointer shadow-2xs truncate"
+                  >
+                    <!-- Populated dynamically by admin-agent.js -->
+                  </select>
+                </div>
+              </div>
+            </div>
+
+            <!-- Quick-Action Prompt Chips -->
+            <div class="px-3.5 py-2.5 border-b border-slate-100 bg-white flex items-center gap-1.5 overflow-x-auto">
+              <span class="text-[10px] font-bold uppercase tracking-wider text-slate-400 shrink-0">Quick Prompts:</span>
+              <button
+                type="button"
+                onclick="window.loadPremadeForCurrentTopic()"
+                class="prompt-chip shrink-0 bg-indigo-50 text-indigo-700 border-indigo-200 hover:bg-indigo-100"
+              >
+                <span>📦 Load Pre-Made Topic Package</span>
+              </button>
+              <button
+                type="button"
+                onclick="window.sendPromptToTeacherLimmy('Draft a complete master lesson, dedicated formula sheet, 3 AP MCQs, and 1 multi-part FRQ with scoring rubric for this sub-unit.')"
+                class="prompt-chip shrink-0"
+              >
+                <span>⚡ Draft Complete Lesson + MCQ + FRQ</span>
+              </button>
+              <button
+                type="button"
+                onclick="window.sendPromptToTeacherLimmy('Generate 5 rigorous Part A and Part B multiple-choice AP practice questions with exam traps.')"
+                class="prompt-chip shrink-0"
+              >
+                <span>📝 Generate 5 AP Practice MCQs</span>
+              </button>
+              <button
+                type="button"
+                onclick="window.sendPromptToTeacherLimmy('Generate a multi-part AP Free-Response Question (FRQ) with point-by-point scoring rubric and model LaTeX solution.')"
+                class="prompt-chip shrink-0"
+              >
+                <span>✍️ Generate Multi-Part FRQ + Rubric</span>
+              </button>
+            </div>
+
+            <!-- Conversation Feed -->
+            <div id="teacher-limmy-chat-feed" class="chat-feed-container space-y-4">
+              <!-- Message bubbles and Staging / Proposal Card injected here -->
+            </div>
+
+            <!-- Chat Input Area -->
+            <div class="p-3 bg-white border-t border-slate-200">
+              <div class="relative flex items-end gap-2 bg-slate-50 border border-slate-300 rounded-xl p-2 focus-within:ring-2 focus-within:ring-blue-600 focus-within:bg-white transition-all">
+                <textarea
+                  id="teacher-limmy-chat-input"
+                  rows="2"
+                  placeholder="Ask Teacher Limmy to draft lessons, questions, or customize LaTeX..."
+                  class="w-full bg-transparent text-xs text-slate-900 placeholder:text-slate-400 focus:outline-none resize-none leading-relaxed"
+                ></textarea>
+                <button
+                  id="teacher-limmy-send-btn"
+                  class="py-1.5 px-3 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs rounded-lg transition-colors shadow-2xs shrink-0 flex items-center gap-1 cursor-pointer"
+                >
+                  <span>Send</span>
+                  <span aria-hidden="true">↑</span>
+                </button>
+              </div>
+              <div class="mt-1 flex items-center justify-between text-[10px] text-slate-400 px-1">
+                <span>Press Enter to send, Shift+Enter for newline</span>
+                <span>Proposals stage in-memory before publishing</span>
+              </div>
+            </div>
+
+          </div>
+
+          <!-- RIGHT PANEL: Live Student-Facing Preview -->
+          <div class="student-preview-viewport flex flex-col bg-white">
+            
+            <!-- Viewport Top Bar -->
+            <div class="p-3.5 border-b border-slate-200 bg-slate-50 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shrink-0">
+              <div>
+                <div class="flex items-center gap-2">
+                  <span class="w-2.5 h-2.5 rounded-full bg-blue-600"></span>
+                  <h3 id="preview-topic-title" class="text-xs font-bold text-slate-900 truncate">
+                    Unit 1 · Topic 1.1: Change in Tandem
+                  </h3>
+                </div>
+                <div class="text-[11px] text-slate-500 mt-0.5">
+                  Live Student Interface (KaTeX math, Dedicated Formula Sheet, Divided MCQ & FRQ with Rubrics)
+                </div>
+              </div>
+
+              <!-- Status Badge -->
+              <div class="flex items-center gap-2">
+                <span id="preview-status-badge" class="px-2.5 py-1 rounded-full text-[11px] font-bold bg-slate-100 text-slate-600 border border-slate-300 flex items-center gap-1.5">
+                  <span class="w-2 h-2 rounded-full bg-slate-400"></span> Skeletal Sub-Unit
+                </span>
+              </div>
+            </div>
+
+            <!-- Viewport Tab Switcher (Master Lesson / Formula Sheet / Practice MCQ / Practice FRQ) -->
+            <div class="px-4 py-2 border-b border-slate-200 bg-slate-50/60 flex items-center justify-between gap-2 shrink-0 overflow-x-auto">
+              <div class="flex items-center gap-1.5">
+                <button
+                  id="btn-preview-tab-lesson"
+                  onclick="window.switchPreviewTab('lesson')"
+                  class="px-3 py-1.5 text-xs font-bold text-blue-700 bg-blue-50 border border-blue-200 rounded-lg cursor-pointer shrink-0"
+                >
+                  📖 Master Lesson
+                </button>
+                <button
+                  id="btn-preview-tab-formulas"
+                  onclick="window.switchPreviewTab('formulas')"
+                  class="px-3 py-1.5 text-xs font-semibold text-slate-600 hover:text-slate-900 bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-lg cursor-pointer shrink-0"
+                >
+                  📐 Formula Sheet
+                </button>
+                <button
+                  id="btn-preview-tab-mcq"
+                  onclick="window.switchPreviewTab('mcq')"
+                  class="px-3 py-1.5 text-xs font-semibold text-slate-600 hover:text-slate-900 bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-lg cursor-pointer shrink-0"
+                >
+                  📝 Practice: MCQ
+                </button>
+                <button
+                  id="btn-preview-tab-frq"
+                  onclick="window.switchPreviewTab('frq')"
+                  class="px-3 py-1.5 text-xs font-semibold text-slate-600 hover:text-slate-900 bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-lg cursor-pointer shrink-0"
+                >
+                  ✍️ Practice: FRQ
+                </button>
+              </div>
+
+              <span class="text-[10px] text-slate-400 hidden sm:inline-block shrink-0">
+                KaTeX Active
+              </span>
+            </div>
+
+            <!-- Student Preview Render Canvas -->
+            <div id="student-preview-content" class="flex-1 p-5 overflow-y-auto">
+              <!-- Rendered by renderRightPanelPreview() in admin-agent.js -->
+            </div>
+
+          </div>
+
+        </div>
+
+        <!-- VIEW 2: RAW KNOWLEDGE VAULT (Requirement 1) -->
+        <div id="admin-view-vault" class="hidden space-y-5 animate-fade-in">
+          <div class="bg-white rounded-2xl border border-slate-200 p-6 shadow-xs space-y-6">
+            
+            <!-- Vault Header -->
+            <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-5 border-b border-slate-200">
+              <div>
+                <div class="flex items-center gap-2">
+                  <h2 class="text-base font-bold text-slate-900">📚 Raw Knowledge Vault (NotebookLM Source Grounding)</h2>
+                  <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-blue-100 text-blue-800 border border-blue-200">
+                    Direct Firestore Synced
+                  </span>
+                </div>
+                <p class="text-xs text-slate-500 mt-1 max-w-3xl leading-relaxed">
+                  Store exhaustive raw curriculum text (extracted from NotebookLM, official College Board Course & Exam Descriptions, and lesson transcripts) under <code class="font-mono text-blue-600 bg-blue-50 px-1 py-0.5 rounded">raw_knowledge/{unitId}</code>. Teacher Limmy fetches and grounds all lesson and question synthesis directly in this knowledge.
+                </p>
+              </div>
+
+              <div class="flex items-center gap-2">
+                <button
+                  type="button"
+                  onclick="window.switchAdminView('studio')"
+                  class="px-3.5 py-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold text-xs rounded-xl shadow-xs transition-colors flex items-center gap-1.5 cursor-pointer"
+                >
+                  <span>⚡ Back to Teacher Limmy Studio</span>
+                </button>
+              </div>
+            </div>
+
+            <!-- Controls & Target Unit Selector Grid -->
+            <div class="grid grid-cols-1 md:grid-cols-12 gap-5 items-start">
+              
+              <!-- Unit Selector Column -->
+              <div class="md:col-span-4 space-y-4 bg-slate-50 p-4 rounded-xl border border-slate-200">
+                <div>
+                  <label class="block text-xs font-bold text-slate-700 mb-1.5">
+                    Target Unit Vault
+                  </label>
+                  <select
+                    id="vault-unit-select"
+                    class="w-full text-xs bg-white border border-slate-300 rounded-xl p-2.5 font-semibold text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-600 cursor-pointer shadow-2xs"
+                  >
+                    <option value="unit_1">Unit 1: Polynomial & Rational Functions</option>
+                    <option value="unit_2">Unit 2: Exponential & Logarithmic Functions</option>
+                    <option value="unit_3">Unit 3: Trigonometric & Polar Functions</option>
+                    <option value="unit_4">Unit 4: Parameters, Vectors, Matrices</option>
+                    <option value="unit_frq">FRQ: Free Response Question Bank & Guidelines</option>
+                  </select>
+                </div>
+
+                <!-- Unit Status Summary Card -->
+                <div class="bg-white p-3.5 rounded-xl border border-slate-200 space-y-2.5 text-xs">
+                  <div class="flex items-center justify-between">
+                    <span class="text-slate-500 font-medium">Firestore Status:</span>
+                    <span id="vault-status-badge" class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-100 text-slate-700">
+                      Checking...
+                    </span>
+                  </div>
+                  <div class="flex items-center justify-between">
+                    <span class="text-slate-500 font-medium">Character Count:</span>
+                    <span id="vault-char-count" class="font-mono font-bold text-slate-800">0 chars</span>
+                  </div>
+                  <div class="flex items-center justify-between">
+                    <span class="text-slate-500 font-medium">Estimated Words:</span>
+                    <span id="vault-word-count" class="font-mono font-bold text-slate-800">0 words</span>
+                  </div>
+                  <div class="flex items-center justify-between pt-1 border-t border-slate-100 text-[11px]">
+                    <span class="text-slate-400">Last Synced:</span>
+                    <span id="vault-last-updated" class="text-slate-600 font-medium">Never</span>
+                  </div>
+                </div>
+
+                <!-- File Dropzone -->
+                <div>
+                  <label class="block text-xs font-bold text-slate-700 mb-1.5">
+                    File Ingestion (.txt, .md, .json)
+                  </label>
+                  <div
+                    id="vault-dropzone"
+                    class="vault-dropzone space-y-1.5"
+                    onclick="document.getElementById('vault-file-input').click()"
+                  >
+                    <input
+                      type="file"
+                      id="vault-file-input"
+                      accept=".txt,.md,.json,.csv"
+                      class="hidden"
+                    />
+                    <div class="text-xl">📂</div>
+                    <div class="text-xs font-semibold text-blue-700">Drop NotebookLM file here</div>
+                    <div class="text-[10px] text-slate-400">or click to browse local files</div>
+                  </div>
+                </div>
+
+                <!-- Quick Action Buttons -->
+                <div class="space-y-2 pt-2">
+                  <button
+                    id="vault-save-btn"
+                    type="button"
+                    class="w-full py-2.5 px-4 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-xl shadow-xs transition-colors flex items-center justify-center gap-1.5 cursor-pointer"
+                  >
+                    <span>💾 Save Raw Knowledge to Firestore</span>
+                  </button>
+                  <div class="flex items-center gap-2">
+                    <button
+                      id="vault-reload-btn"
+                      type="button"
+                      class="flex-1 py-2 px-3 bg-white hover:bg-slate-100 text-slate-700 border border-slate-300 font-semibold text-xs rounded-xl transition-colors cursor-pointer"
+                    >
+                      <span>🔄 Reload</span>
+                    </button>
+                    <button
+                      id="vault-clear-btn"
+                      type="button"
+                      class="py-2 px-3 bg-white hover:bg-slate-100 text-slate-700 border border-slate-300 font-semibold text-xs rounded-xl transition-colors cursor-pointer"
+                      title="Clear editor textarea"
+                    >
+                      <span>🧹 Clear Text</span>
+                    </button>
+                  </div>
+                  <button
+                    id="vault-sync-all-btn"
+                    type="button"
+                    onclick="window.syncAllRawNotesToFirestore()"
+                    class="w-full py-2.5 px-3 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs rounded-xl shadow-xs transition-colors flex items-center justify-center gap-1.5 cursor-pointer"
+                    title="Commit all 5 unit notebooks directly to Cloud Firestore"
+                  >
+                    <span>🚀 Sync All 5 Units to Firestore</span>
+                  </button>
+                  <button
+                    id="vault-delete-all-btn"
+                    type="button"
+                    onclick="window.deleteAllRawKnowledgeFromFirestore()"
+                    class="w-full py-2 px-3 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 font-bold text-xs rounded-xl transition-colors flex items-center justify-center gap-1.5 cursor-pointer"
+                    title="Permanently delete all raw notes from Firestore database"
+                  >
+                    <span>🗑️ Purge All Notes from Firestore</span>
+                  </button>
+                </div>
+              </div>
+
+              <!-- Main Textarea Editor Column -->
+              <div class="md:col-span-8 space-y-2">
+                <div class="flex items-center justify-between">
+                  <label class="text-xs font-bold text-slate-700 flex items-center gap-2">
+                    <span>Raw NotebookLM Notes & Curriculum Transcripts</span>
+                    <span class="text-[10px] text-slate-400 font-normal">Supports full markdown, LaTeX math formulas, and syllabus tables</span>
+                  </label>
+                  <span class="text-[11px] font-mono text-slate-500" id="vault-live-counter">0 characters</span>
+                </div>
+
+                <textarea
+                  id="vault-raw-text"
+                  class="vault-editor"
+                  placeholder="Paste exhaustive raw text from NotebookLM, College Board AP Precalculus Course and Exam Description (CED), formula derivations, and common student traps here...
+
+Example format:
+# Unit 1: Polynomial & Rational Functions
+- Topic 1.1 Change in Tandem: Key behaviors, rate signs, increasing/decreasing intervals.
+- Topic 1.2 Rates of Change: AROC = [f(b) - f(a)] / (b - a). Concavity rules: rate of change increasing => concave up.
+- Common AP Traps: Confusing rate of change with value of the function; calculator rounding before step 3."
+                ></textarea>
+              </div>
+
+            </div>
+
+          </div>
+        </div>
+
+        <!-- VIEW 3: MASSIVE QUESTION BANK HUB & CURATION ENGINE -->
+        <div id="admin-view-bank" class="hidden space-y-5 animate-fade-in pb-24">
+          
+          <!-- A) Hierarchical Filter & Navigation Bar -->
+          <div class="bg-white rounded-2xl border border-slate-200 p-5 shadow-xs space-y-4">
+            
+            <!-- Top Row: Title, Live Counter Badges, and Batch Seeder Action -->
+            <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-4 pb-4 border-b border-slate-200">
+              <div>
+                <div class="flex flex-wrap items-center gap-2">
+                  <h2 class="text-base font-bold text-slate-900">🏦 Massive Question Bank & Curriculum Curation Engine</h2>
+                  <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-indigo-100 text-indigo-800 border border-indigo-200">
+                    Firestore Collection: question_bank
+                  </span>
+                </div>
+                <p class="text-xs text-slate-500 mt-1">
+                  Curate, filter, and toggle student visibility (<code class="font-mono text-emerald-700 bg-emerald-50 px-1 py-0.5 rounded">is_published</code>) across all 44 topics and 88 sub-topics with instant Firestore sync.
+                </p>
+              </div>
+
+              <!-- Live Counter Badges & Firestore Batch Seeder -->
+              <div class="flex flex-wrap items-center gap-2.5">
+                <div class="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl bg-slate-900 text-white text-xs font-mono font-semibold shadow-2xs">
+                  <span>Total in Bank: <strong id="bank-stat-total" class="text-blue-400">0</strong></span>
+                  <span class="text-slate-600">|</span>
+                  <span>Published to Students: <strong id="bank-stat-published" class="text-emerald-400">0</strong></span>
+                  <span class="text-slate-600">|</span>
+                  <span>Filtered: <strong id="bank-stat-filtered" class="text-amber-300">0</strong></span>
+                </div>
+
+                <button
+                  id="btn-seed-question-bank"
+                  type="button"
+                  onclick="window.seedMassiveQuestionBankToFirestore()"
+                  class="px-3.5 py-2 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white font-bold text-xs rounded-xl shadow-xs transition-all flex items-center gap-1.5 cursor-pointer"
+                  title="Assign and batch-write all 2,288 pre-generated MCQ & FRQ items (52 per topic) into their 44 designated topics and Cloud Firestore"
+                >
+                  <span>🌱 Assign & Sync All 2,288 Bank Questions (52/Topic)</span>
+                </button>
+              </div>
+            </div>
+
+            <!-- Second Row: Hierarchical Dropdowns (Unit -> Topic -> Sub-Topic) & Search -->
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-12 gap-3">
+              <!-- Select Unit -->
+              <div class="lg:col-span-3">
+                <label class="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1">
+                  1. Select Unit
+                </label>
+                <select
+                  id="bank-unit-select"
+                  class="w-full text-xs bg-slate-50 border border-slate-300 rounded-xl p-2.5 font-semibold text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-600 cursor-pointer"
+                >
+                  <option value="all">All Units (Units 1 – 4)</option>
+                  <option value="unit_1">Unit 1: Polynomial & Rational Functions</option>
+                  <option value="unit_2">Unit 2: Exponential & Logarithmic Functions</option>
+                  <option value="unit_3">Unit 3: Trigonometric & Polar Functions</option>
+                  <option value="unit_4">Unit 4: Parameters, Vectors & Matrices</option>
+                </select>
+              </div>
+
+              <!-- Select Topic -->
+              <div class="lg:col-span-3">
+                <label class="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1">
+                  2. Select Topic
+                </label>
+                <select
+                  id="bank-topic-select"
+                  class="w-full text-xs bg-slate-50 border border-slate-300 rounded-xl p-2.5 font-semibold text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-600 cursor-pointer"
+                >
+                  <option value="all">All 44 Topics</option>
+                </select>
+              </div>
+
+              <!-- Select Sub-Topic -->
+              <div class="lg:col-span-3">
+                <label class="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1">
+                  3. Select Sub-Topic
+                </label>
+                <select
+                  id="bank-subtopic-select"
+                  class="w-full text-xs bg-slate-50 border border-slate-300 rounded-xl p-2.5 font-semibold text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-600 cursor-pointer"
+                >
+                  <option value="all">All Sub-Topics (.A / .B)</option>
+                </select>
+              </div>
+
+              <!-- Search Input -->
+              <div class="lg:col-span-3">
+                <label class="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1">
+                  4. Search LaTeX / ID / Concept
+                </label>
+                <input
+                  id="bank-search-input"
+                  type="text"
+                  placeholder="Search e.g. qb_1_3_A, secant, concave..."
+                  class="w-full text-xs bg-slate-50 border border-slate-300 rounded-xl p-2.5 text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-600 focus:bg-white"
+                />
+              </div>
+            </div>
+
+            <!-- Third Row: Filter Pills & Difficulty Selector -->
+            <div class="flex flex-wrap items-center justify-between gap-3 pt-2 border-t border-slate-100">
+              <div class="flex flex-wrap items-center gap-1.5" id="bank-filter-pills">
+                <span class="text-[11px] font-bold text-slate-400 uppercase tracking-wider mr-1">Filter:</span>
+                <button type="button" data-bank-filter="all" class="bank-filter-pill active">All</button>
+                <button type="button" data-bank-filter="mcq" class="bank-filter-pill">MCQ Only</button>
+                <button type="button" data-bank-filter="frq" class="bank-filter-pill">FRQ Only</button>
+                <button type="button" data-bank-filter="calc" class="bank-filter-pill">🧮 Calculator Active</button>
+                <button type="button" data-bank-filter="nocalc" class="bank-filter-pill">🚫 Non-Calculator</button>
+                <button type="button" data-bank-filter="published" class="bank-filter-pill">🚀 Published Only</button>
+                <button type="button" data-bank-filter="unpublished" class="bank-filter-pill">📦 Bank / Unpublished Only</button>
+              </div>
+
+              <div class="flex items-center gap-2">
+                <label class="text-[11px] font-bold text-slate-500">Difficulty:</label>
+                <select
+                  id="bank-difficulty-select"
+                  class="text-xs bg-slate-50 border border-slate-300 rounded-lg px-2.5 py-1.5 font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-600 cursor-pointer"
+                >
+                  <option value="all">All Difficulties</option>
+                  <option value="Easy">🟢 Easy (Foundational)</option>
+                  <option value="Medium">🟡 Medium (AP Standard)</option>
+                  <option value="Hard">🔴 Hard (Score-5 Challenge)</option>
+                </select>
+              </div>
+            </div>
+
+            <!-- Fourth Row: Bulk Actions Toolbar & Sub-Topic Infinite Generator Trigger -->
+            <div class="flex flex-wrap items-center justify-between gap-3 pt-3 border-t border-slate-200 bg-slate-50/70 -mx-5 -mb-5 px-5 py-3 rounded-b-2xl">
+              <div class="flex flex-wrap items-center gap-2.5">
+                <label class="inline-flex items-center gap-2 text-xs font-bold text-slate-700 cursor-pointer select-none">
+                  <input
+                    type="checkbox"
+                    id="bank-select-all-checkbox"
+                    class="w-4 h-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500 cursor-pointer"
+                  />
+                  <span>Select Page / Filtered</span>
+                </label>
+
+                <span id="bank-selected-count" class="px-2 py-0.5 rounded-full text-[11px] font-mono font-bold bg-blue-100 text-blue-800">
+                  0 selected
+                </span>
+
+                <div class="h-4 w-px bg-slate-300 mx-1"></div>
+
+                <button
+                  type="button"
+                  onclick="window.bulkUpdateSelectedQuestions('publish')"
+                  class="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-lg shadow-2xs transition-colors cursor-pointer"
+                >
+                  🚀 Publish Selected
+                </button>
+                <button
+                  type="button"
+                  onclick="window.bulkUpdateSelectedQuestions('unpublish')"
+                  class="px-3 py-1.5 bg-slate-700 hover:bg-slate-800 text-white font-bold text-xs rounded-lg shadow-2xs transition-colors cursor-pointer"
+                >
+                  📦 Unpublish Selected
+                </button>
+                <button
+                  type="button"
+                  onclick="window.bulkUpdateSelectedQuestions('delete')"
+                  class="px-3 py-1.5 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 font-bold text-xs rounded-lg transition-colors cursor-pointer"
+                >
+                  🗑️ Delete Selected
+                </button>
+              </div>
+
+              <!-- Sub-Topic Infinite Generator Trigger -->
+              <button
+                type="button"
+                onclick="window.triggerLimmyInfiniteGenerator()"
+                class="px-3.5 py-2 bg-gradient-to-r from-violet-600 via-indigo-600 to-blue-600 hover:from-violet-700 hover:via-indigo-700 hover:to-blue-700 text-white font-bold text-xs rounded-xl shadow-sm transition-all flex items-center gap-1.5 cursor-pointer"
+              >
+                <span>⚡ Generate 15 More Questions for <span id="bank-active-subtopic-label">1.1.A</span></span>
+              </button>
+            </div>
+
+          </div>
+
+          <!-- C) Staged Batch Preview Panel for "⚡ Limmy Infinite Generator" (Hidden until triggered) -->
+          <div id="bank-generator-staging-panel" class="hidden bg-indigo-950 text-white rounded-2xl border border-indigo-700 p-5 shadow-xl space-y-4">
+            <!-- Populated dynamically by admin-bank.js -->
+          </div>
+
+          <!-- B) Question Explorer Cards Grid + Pagination Bar -->
+          <div class="flex items-center justify-between px-1">
+            <div id="bank-showing-summary" class="text-xs font-semibold text-slate-600">
+              Loading Question Bank...
+            </div>
+            <div class="flex items-center gap-2" id="bank-pagination-controls">
+              <!-- Pagination controls populated by admin-bank.js -->
+            </div>
+          </div>
+
+          <div id="bank-questions-container" class="space-y-4">
+            <!-- Question Explorer Cards rendered by admin-bank.js -->
+          </div>
+
+          <!-- Floating "⚡ Limmy Infinite Generator" Trigger -->
+          <div class="fixed bottom-6 right-6 z-40">
+            <button
+              type="button"
+              onclick="window.triggerLimmyInfiniteGenerator()"
+              class="group flex items-center gap-2.5 px-4 py-3 bg-gradient-to-r from-indigo-600 via-blue-600 to-violet-600 hover:from-indigo-700 hover:via-blue-700 hover:to-violet-700 text-white rounded-full shadow-xl hover:shadow-2xl transition-all duration-200 cursor-pointer border border-white/20"
+            >
+              <span class="text-base">⚡</span>
+              <span class="text-xs font-bold tracking-wide">
+                Generate 15 More Questions (<span id="bank-floating-subtopic-label">1.1.A</span>)
+              </span>
+            </button>
+          </div>
+
+        <!-- VIEW 4: ACLEDA KHQR PAYMENT APPROVALS PORTAL -->
+        <div id="admin-view-payments" class="hidden space-y-5 animate-fade-in pb-24">
+          <div id="admin-payments-mount-point"></div>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- ======================================================================
+         STUDENT PRACTICE HUB, MULTI-CRITERIA FILTER & DIRECTORY ENGINE
+         ====================================================================== -->
+    <section id="practice-hub-section" class="hidden py-6 sm:py-8 bg-slate-50 min-h-screen max-w-full overflow-x-hidden">
+      <div class="max-w-7xl w-full mx-auto px-3 sm:px-6 lg:px-8 space-y-4 sm:space-y-6 pb-24 max-w-full overflow-x-hidden">
+
+        <!-- Practice Hub Header & Quick Launch Banner -->
+        <div class="flex flex-col lg:flex-row lg:items-end justify-between gap-4 pb-4 border-b border-slate-200">
+          <div>
+            <div class="text-xs font-bold text-blue-600 uppercase tracking-wider mb-1">
+              College Board Exam Simulation & Topic Mastery Engine
+            </div>
+            <h1 class="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">
+              AP Precalculus Question Bank & Practice Hub
+            </h1>
+            <p class="text-xs sm:text-sm text-slate-600 mt-1 max-w-3xl">
+              Filter all 2,288 AP-aligned Multiple-Choice (MCQ) and Free-Response (FRQ) items (52 questions per topic) across Units 1–4 by topic, sub-topic, difficulty (Easy, Medium, Hard), calculator section, and mastery status. Select multiple topics or click <strong>Practice</strong> on any topic to configure your custom session.
+            </p>
+          </div>
+
+          <div class="flex flex-wrap items-center gap-2.5 self-start lg:self-auto shrink-0">
+            <button
+              type="button"
+              onclick="window.location.hash = '#/progress'"
+              class="px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-xl shadow-xs transition-all cursor-pointer flex items-center gap-2"
+              title="Open Student Progress, Struggle Areas & Mastery Tracker"
+            >
+              <span>📊 Progress & Mastery Tracker</span>
+            </button>
+            <button
+              type="button"
+              onclick="window.toggleTi84Calculator && window.toggleTi84Calculator()"
+              class="px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-xl shadow-xs transition-all cursor-pointer flex items-center gap-2"
+              title="Open or toggle the floating TI-84 Plus CE Graphing Calculator"
+            >
+              <span>🧮 TI-84 Calculator</span>
+            </button>
+            <button
+              type="button"
+              onclick="window.openPracticeLauncher({ defaultMode: 'study' })"
+              class="px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-xl shadow-xs transition-all cursor-pointer flex items-center gap-2"
+            >
+              <span>🎯 Customize & Launch Practice</span>
+            </button>
+            <button
+              type="button"
+              onclick="window.openPracticeLauncher({ defaultMode: 'exam', label: 'Full AP Exam Timed Simulation' })"
+              class="px-4 py-2.5 bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold rounded-xl shadow-xs transition-all cursor-pointer flex items-center gap-2"
+            >
+              <span>⏱️ Timed Exam Simulation</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- 1. PRACTICE HUB FILTER & DIRECTORY TOOLBAR -->
+        <div class="bg-white rounded-2xl border border-slate-200 p-4 sm:p-5 shadow-sm space-y-4">
+
+          <!-- Row 1: Unit, Topic, Sub-Topic Selectors & Keyword Search -->
+          <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-12 gap-3">
+            <!-- Unit Selector -->
+            <div class="lg:col-span-3">
+              <label for="practice-filter-unit" class="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1">
+                Unit Selector (Units 1–4)
+              </label>
+              <select
+                id="practice-filter-unit"
+                class="w-full text-xs bg-slate-50 border border-slate-300 rounded-xl p-2.5 font-semibold text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-600 cursor-pointer"
+              >
+                <option value="all">All 4 Units (Units 1 – 4)</option>
+                <option value="unit_1">Unit 1: Polynomial & Rational Functions</option>
+                <option value="unit_2">Unit 2: Exponential & Logarithmic Functions</option>
+                <option value="unit_3">Unit 3: Trigonometric & Polar Functions</option>
+                <option value="unit_4">Unit 4: Parameters, Vectors & Matrices</option>
+              </select>
+            </div>
+
+            <!-- Topic Selector -->
+            <div class="lg:col-span-3">
+              <label for="practice-filter-topic" class="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1">
+                Topic Drill-Down
+              </label>
+              <select
+                id="practice-filter-topic"
+                class="w-full text-xs bg-slate-50 border border-slate-300 rounded-xl p-2.5 font-semibold text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-600 cursor-pointer"
+              >
+                <option value="all">All 44 Topics</option>
+              </select>
+            </div>
+
+            <!-- Sub-Topic Selector -->
+            <div class="lg:col-span-3">
+              <label for="practice-filter-subtopic" class="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1">
+                Sub-Topic Drill-Down (.A / .B)
+              </label>
+              <select
+                id="practice-filter-subtopic"
+                class="w-full text-xs bg-slate-50 border border-slate-300 rounded-xl p-2.5 font-semibold text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-600 cursor-pointer"
+              >
+                <option value="all">All Sub-Topics</option>
+              </select>
+            </div>
+
+            <!-- Search Input -->
+            <div class="lg:col-span-3">
+              <label for="practice-filter-search" class="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1">
+                Search Topic or Concept
+              </label>
+              <input
+                id="practice-filter-search"
+                type="text"
+                placeholder="e.g. secant, 1.3, asymptote, polar..."
+                class="w-full text-xs bg-slate-50 border border-slate-300 rounded-xl p-2.5 text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-600 focus:bg-white"
+              />
+            </div>
+          </div>
+
+          <!-- Row 2: Multi-Criteria Interactive Filter Pills -->
+          <div class="grid grid-cols-1 lg:grid-cols-2 gap-3 pt-3 border-t border-slate-100">
+
+            <!-- Question Type & Calculator Mode Pills -->
+            <div class="flex flex-wrap items-center gap-2">
+              <span class="text-[11px] font-bold uppercase tracking-wider text-slate-400 mr-1">Format:</span>
+              <button type="button" data-practice-type="all" class="practice-filter-pill active">All</button>
+              <button type="button" data-practice-type="MCQ" class="practice-filter-pill">MCQs Only</button>
+              <button type="button" data-practice-type="FRQ" class="practice-filter-pill">FRQs Only</button>
+
+              <span class="hidden sm:inline text-slate-300 mx-1">|</span>
+
+              <span class="text-[11px] font-bold uppercase tracking-wider text-slate-400 mr-1">Calculator:</span>
+              <button type="button" data-practice-calc="all" class="practice-filter-pill active">All</button>
+              <button type="button" data-practice-calc="nocalc" class="practice-filter-pill">🔴 Part A: No Calculator</button>
+              <button type="button" data-practice-calc="calc" class="practice-filter-pill">🟢 Part B: Calculator Active</button>
+            </div>
+
+            <!-- High-Visibility Segmented Difficulty Filter Pills with Dynamic Count Badges -->
+            <div class="flex flex-wrap items-center gap-2">
+              <span class="text-[11px] font-bold uppercase tracking-wider text-slate-400 mr-1">Difficulty:</span>
+              <button
+                type="button"
+                data-practice-difficulty="all"
+                class="practice-filter-pill diff-pill-all active"
+              >
+                <span>All Difficulties</span>
+                <span id="hub-diff-count-all" class="diff-count-badge">2,288</span>
+              </button>
+              <button
+                type="button"
+                data-practice-difficulty="Easy"
+                class="practice-filter-pill diff-pill-easy"
+              >
+                <span>🟢 Easy</span>
+                <span id="hub-diff-count-easy" class="diff-count-badge">880</span>
+              </button>
+              <button
+                type="button"
+                data-practice-difficulty="Medium"
+                class="practice-filter-pill diff-pill-medium"
+              >
+                <span>🟡 Medium</span>
+                <span id="hub-diff-count-medium" class="diff-count-badge">880</span>
+              </button>
+              <button
+                type="button"
+                data-practice-difficulty="Hard"
+                class="practice-filter-pill diff-pill-hard"
+              >
+                <span>🔴 Hard</span>
+                <span id="hub-diff-count-hard" class="diff-count-badge">528</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- Row 3: Completion Status Pills + Dynamic Real-Time Results Counter -->
+          <div class="flex flex-wrap items-center justify-between gap-3 pt-3 border-t border-slate-100">
+            <div class="flex flex-wrap items-center gap-1.5">
+              <span class="text-[11px] font-bold uppercase tracking-wider text-slate-400 mr-1">Status:</span>
+              <button type="button" data-practice-status="all" class="practice-filter-pill active">All</button>
+              <button type="button" data-practice-status="unattempted" class="practice-filter-pill">Unattempted (<span id="practice-stat-unattempted">0</span>)</button>
+              <button type="button" data-practice-status="missed" class="practice-filter-pill">Needs Review / Missed (<span id="practice-stat-missed">0</span>)</button>
+              <button type="button" data-practice-status="mastered" class="practice-filter-pill">Mastered (<span id="practice-stat-mastered">0</span>)</button>
+            </div>
+
+            <!-- Dynamic Results Counter -->
+            <div class="flex flex-wrap items-center gap-3">
+              <div id="practice-results-counter" class="text-xs sm:text-sm font-semibold text-slate-700">
+                Showing <strong class="text-blue-600 font-extrabold">2,288</strong> Practice Items matching filters
+              </div>
+              <div class="hidden sm:flex items-center gap-2 text-xs font-mono bg-slate-100 px-2.5 py-1 rounded-lg text-slate-700">
+                <span>MCQs: <strong id="practice-stat-mcq">1,936</strong></span>
+                <span class="text-slate-300">|</span>
+                <span>FRQs: <strong id="practice-stat-frq">352</strong></span>
+              </div>
+              <button
+                type="button"
+                onclick="window.resetPracticeHubFilters()"
+                class="text-xs font-bold text-slate-500 hover:text-slate-900 underline cursor-pointer"
+              >
+                Reset
+              </button>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- Expandable Unit 1–4 & Topic Directory List -->
+        <div id="practice-units-directory" class="space-y-4">
+          <!-- Populated dynamically by /practice.js -->
+        </div>
+
+      </div>
+
+      <!-- Floating Bottom Multi-Topic Selection Bar (Matches Reference UI) -->
+      <div
+        id="practice-floating-selection-bar"
+        class="hidden fixed bottom-6 left-1/2 -translate-x-1/2 z-40 bg-slate-900 text-white px-5 py-3 rounded-2xl shadow-2xl border border-slate-700 flex items-center gap-4"
+      >
+        <button
+          type="button"
+          onclick="window.clearPracticeTopicSelections()"
+          class="text-xs font-semibold text-slate-400 hover:text-white cursor-pointer"
+          title="Clear selected topics"
+        >
+          ✕ Clear
+        </button>
+        <div id="practice-floating-selection-summary" class="text-xs sm:text-sm font-bold tracking-tight">
+          1 topic selected • 18 questions
+        </div>
+        <button
+          type="button"
+          onclick="window.openPracticeLauncher({})"
+          class="px-4 py-1.5 bg-cyan-400 hover:bg-cyan-300 text-slate-950 font-extrabold text-xs sm:text-sm rounded-xl shadow-xs transition-all cursor-pointer flex items-center gap-1.5"
+        >
+          <span>Start</span>
+          <span aria-hidden="true">›</span>
+        </button>
+      </div>
+    </section>
+
+    <!-- ======================================================================
+         2. SIMPLIFIED "PRACTICE CONFIGURATION" / SESSION LAUNCHER MODAL
+         ====================================================================== -->
+    <div
+      id="practice-launcher-modal"
+      class="hidden fixed inset-0 z-50 bg-slate-950/65 backdrop-blur-xs flex items-center justify-center p-4 overflow-y-auto"
+    >
+      <div class="practice-launcher-card bg-white rounded-3xl border border-slate-200 shadow-2xl w-full max-w-lg overflow-hidden my-8 animate-fade-in">
+        <!-- Modal Header -->
+        <div class="px-6 py-5 bg-slate-900 text-white flex items-center justify-between gap-4">
+          <div class="min-w-0">
+            <div class="text-[11px] font-bold uppercase tracking-wider text-blue-400">
+              AP Precalculus Practice
+            </div>
+            <h2 id="launcher-source-title" class="text-lg sm:text-xl font-extrabold tracking-tight truncate mt-0.5">
+              Topic 1.1: Change in Tandem
+            </h2>
+          </div>
+          <button
+            type="button"
+            onclick="window.closePracticeLauncher()"
+            class="w-8 h-8 rounded-full bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white flex items-center justify-center cursor-pointer shrink-0 transition-colors"
+            aria-label="Close Practice Launcher"
+          >
+            ✕
+          </button>
+        </div>
+
+        <!-- Modal Body: Clean 3-Option Question Format Selector -->
+        <div id="launcher-modal-body" class="p-6 space-y-4">
+          <div>
+            <h3 class="text-base font-extrabold text-slate-900">
+              Choose Practice Format
+            </h3>
+            <p class="text-xs text-slate-500 mt-0.5">
+              Select the question format you want to practice for this topic:
+            </p>
+          </div>
+
+          <div class="space-y-3" id="launcher-format-options">
+            <!-- Populated dynamically by /practice.js -->
+          </div>
+        </div>
+
+        <!-- Modal Footer -->
+        <div class="px-6 py-4 bg-slate-50 border-t border-slate-200 flex items-center justify-between gap-3">
+          <button
+            type="button"
+            onclick="window.closePracticeLauncher()"
+            class="px-4 py-2.5 rounded-xl border border-slate-300 bg-white hover:bg-slate-100 text-xs font-bold text-slate-700 cursor-pointer transition-colors"
+          >
+            Cancel
+          </button>
+          <button
+            id="btn-launch-practice-session"
+            type="button"
+            onclick="window.launchPracticeSession()"
+            class="flex-1 sm:flex-initial px-6 py-3 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-sm font-extrabold shadow-md hover:shadow-lg transition-all cursor-pointer flex items-center justify-center gap-2"
+          >
+            <span>🚀 Start Practice</span>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ======================================================================
+         3. TOPIC PRACTICE ARENA & QUESTION RUNNER UI (FULL-SCREEN OVERLAY)
+         ====================================================================== -->
+    <div
+      id="practice-arena-overlay"
+      class="hidden fixed inset-0 z-50 bg-slate-50 flex flex-col overflow-hidden"
+    >
+      <!-- A) QUESTION TOP BAR -->
+      <header class="bg-white border-b border-slate-200 px-4 sm:px-6 h-16 flex items-center justify-between gap-4 shrink-0 relative">
+        <!-- Left: Back to Question Bank, Directions Dropdown & Topic Breadcrumb -->
+        <div class="flex items-center gap-3 min-w-0">
+          <button
+            type="button"
+            onclick="window.closePracticeArena()"
+            class="inline-flex items-center gap-1.5 text-xs sm:text-sm font-bold text-slate-700 hover:text-blue-600 cursor-pointer shrink-0"
+          >
+            <span>‹</span>
+            <span>Question Bank</span>
+          </button>
+
+          <div class="h-4 w-px bg-slate-200"></div>
+
+          <button
+            type="button"
+            onclick="window.toggleArenaDirections()"
+            class="inline-flex items-center gap-1 text-xs font-semibold text-slate-600 hover:text-slate-900 cursor-pointer shrink-0"
+          >
+            <span>Directions</span>
+            <span class="text-[10px]">▾</span>
+          </button>
+
+          <div class="hidden lg:flex items-center gap-2 text-xs min-w-0" id="arena-top-breadcrumb">
+            <!-- Populated by /practice.js -->
+          </div>
+        </div>
+
+        <!-- Center: Live Countdown / Elapsed Timer -->
+        <div class="flex items-center gap-2 bg-slate-100 border border-slate-200/80 px-3 py-1.5 rounded-full">
+          <span id="arena-timer-display" class="font-mono text-xs sm:text-sm font-extrabold text-slate-900 tabular-nums">
+            00:00
+          </span>
+          <button
+            id="arena-timer-pause-btn"
+            type="button"
+            onclick="window.toggleArenaTimerPause()"
+            class="text-xs text-slate-600 hover:text-slate-900 cursor-pointer px-1"
+            title="Pause / Resume Timer"
+          >
+            ⏸
+          </button>
+          <button
+            id="arena-timer-hide-btn"
+            type="button"
+            onclick="window.toggleArenaTimerHide()"
+            class="text-[11px] font-bold text-slate-600 hover:text-slate-900 bg-white px-2 py-0.5 rounded-full border border-slate-200 cursor-pointer"
+          >
+            Hide
+          </button>
+        </div>
+
+        <!-- Right: Calculator Status Badge & Tool Triggers (TI-84, Scratchpad, Formulas) -->
+        <div class="flex items-center gap-2 shrink-0">
+          <button
+            id="arena-calc-badge"
+            type="button"
+            onclick="window.openTi84Calculator && window.openTi84Calculator()"
+            class="hidden sm:inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-300 transition-colors cursor-pointer shadow-2xs"
+            title="Click to open the TI-84 Plus CE Online Calculator"
+          >
+            🟢 Calculator Permitted — Open TI-84
+          </button>
+
+          <button
+            type="button"
+            onclick="window.toggleTi84Calculator && window.toggleTi84Calculator()"
+            class="px-3 py-1.5 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-xs font-bold text-slate-700 flex items-center gap-1.5 cursor-pointer shadow-2xs"
+            title="Open TI-84 Plus CE Online Calculator"
+          >
+            <span>🧮</span>
+            <span class="hidden md:inline">TI-84 Calculator</span>
+          </button>
+
+          <button
+            type="button"
+            onclick="window.toggleArenaSideDrawer('formulas')"
+            class="px-3 py-1.5 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-xs font-bold text-slate-700 flex items-center gap-1.5 cursor-pointer shadow-2xs"
+            title="Open Formula Reference Sheet & Digital Scratchpad"
+          >
+            <span>📐</span>
+            <span class="hidden md:inline">Formulas & Pad</span>
+          </button>
+        </div>
+
+        <!-- Thin Progress Bar Along Bottom Edge of Top Bar -->
+        <div class="absolute bottom-0 left-0 right-0 h-1 bg-slate-100">
+          <div id="arena-progress-fill" class="h-full bg-blue-600 transition-all duration-300" style="width: 10%"></div>
+        </div>
+
+        <!-- Directions Popover -->
+        <div
+          id="arena-directions-popover"
+          class="hidden absolute top-16 left-6 z-40 w-96 max-w-[90vw] bg-white rounded-2xl border border-slate-200 shadow-xl p-4 text-xs text-slate-700 space-y-2"
+        >
+          <div class="flex items-center justify-between font-bold text-slate-900">
+            <span>Official AP Precalculus Exam Directions</span>
+            <button type="button" onclick="window.toggleArenaDirections()" class="text-slate-400 hover:text-slate-700 cursor-pointer">✕</button>
+          </div>
+          <p>
+            Solve each problem carefully. For Multiple-Choice Questions, select the single best option (A–D). You may use the strikethrough buttons on the right to eliminate distractors. For Free-Response Questions, show all algebraic setup, difference quotients, or graphical justifications clearly.
+          </p>
+        </div>
+      </header>
+
+      <!-- A2) TOPIC PRACTICE ARENA DIFFICULTY & QUESTION-TYPE FILTER TOOLBAR -->
+      <div
+        id="arena-difficulty-toolbar"
+        class="bg-slate-100/90 border-b border-slate-200 px-4 sm:px-6 py-2.5 flex flex-wrap items-center justify-between gap-3 shrink-0"
+      >
+        <div class="flex flex-wrap items-center gap-1.5 sm:gap-2">
+          <span class="text-[11px] font-extrabold uppercase tracking-wider text-slate-500 mr-1">
+            Difficulty Filter:
+          </span>
+          <button
+            type="button"
+            data-arena-difficulty="all"
+            onclick="window.setArenaDifficultyFilter('all')"
+            class="practice-filter-pill diff-pill-all active"
+          >
+            <span>All Difficulties</span>
+            <span id="arena-diff-count-all" class="diff-count-badge">0</span>
+          </button>
+          <button
+            type="button"
+            data-arena-difficulty="Easy"
+            onclick="window.setArenaDifficultyFilter('Easy')"
+            class="practice-filter-pill diff-pill-easy"
+          >
+            <span>🟢 Easy</span>
+            <span id="arena-diff-count-easy" class="diff-count-badge">0</span>
+          </button>
+          <button
+            type="button"
+            data-arena-difficulty="Medium"
+            onclick="window.setArenaDifficultyFilter('Medium')"
+            class="practice-filter-pill diff-pill-medium"
+          >
+            <span>🟡 Medium</span>
+            <span id="arena-diff-count-medium" class="diff-count-badge">0</span>
+          </button>
+          <button
+            type="button"
+            data-arena-difficulty="Hard"
+            onclick="window.setArenaDifficultyFilter('Hard')"
+            class="practice-filter-pill diff-pill-hard"
+          >
+            <span>🔴 Hard</span>
+            <span id="arena-diff-count-hard" class="diff-count-badge">0</span>
+          </button>
+        </div>
+
+        <div class="flex flex-wrap items-center gap-2.5">
+          <div class="flex items-center gap-1 bg-white px-2 py-1 rounded-xl border border-slate-200/90 shadow-2xs">
+            <span class="text-[10px] font-bold uppercase tracking-wider text-slate-400 px-1">Type:</span>
+            <button
+              type="button"
+              data-arena-type="all"
+              onclick="window.setArenaTypeFilter('all')"
+              class="px-2 py-0.5 rounded-lg text-[11px] font-bold transition-colors cursor-pointer bg-slate-900 text-white"
+            >
+              Both (MCQ + FRQ)
+            </button>
+            <button
+              type="button"
+              data-arena-type="MCQ"
+              onclick="window.setArenaTypeFilter('MCQ')"
+              class="px-2 py-0.5 rounded-lg text-[11px] font-bold transition-colors cursor-pointer text-slate-600 hover:bg-slate-100"
+            >
+              MCQ Only
+            </button>
+            <button
+              type="button"
+              data-arena-type="FRQ"
+              onclick="window.setArenaTypeFilter('FRQ')"
+              class="px-2 py-0.5 rounded-lg text-[11px] font-bold transition-colors cursor-pointer text-slate-600 hover:bg-slate-100"
+            >
+              FRQ Only
+            </button>
+          </div>
+
+          <div
+            id="arena-difficulty-results-counter"
+            class="text-xs font-semibold text-slate-700 bg-white px-3 py-1 rounded-xl border border-slate-200/90 shadow-2xs"
+          >
+            Showing <strong class="text-blue-600 font-extrabold">0</strong> of <strong>0</strong> questions matching <strong>All Difficulties</strong>
+          </div>
+        </div>
+      </div>
+
+      <!-- MAIN WORKSPACE (Question Stage + Optional Slide-Over Formula/Scratchpad Drawer) -->
+      <div class="flex-1 flex overflow-hidden relative">
+        <!-- Main Scrollable Question Stage -->
+        <div id="arena-question-stage" class="flex-1 overflow-y-auto p-4 sm:p-8">
+          <!-- Populated dynamically by /practice.js -->
+        </div>
+
+        <!-- Slide-Over Digital Scratchpad & Formula Reference Sheet Drawer -->
+        <aside
+          id="arena-side-drawer"
+          class="hidden w-full sm:w-96 bg-slate-50 border-l border-slate-200 flex flex-col shrink-0 shadow-xl z-30"
+        >
+          <div class="p-3.5 bg-white border-b border-slate-200 flex items-center justify-between">
+            <div class="flex items-center gap-1.5">
+              <button
+                type="button"
+                onclick="window.toggleArenaSideDrawer('formulas')"
+                class="px-3 py-1 rounded-lg text-xs font-bold bg-blue-50 text-blue-700 cursor-pointer"
+              >
+                📐 Topic Formulas
+              </button>
+              <button
+                type="button"
+                onclick="window.toggleArenaSideDrawer('scratchpad')"
+                class="px-3 py-1 rounded-lg text-xs font-bold bg-slate-100 text-slate-700 hover:bg-slate-200 cursor-pointer"
+              >
+                📝 Scratchpad
+              </button>
+            </div>
+            <button
+              type="button"
+              onclick="window.toggleArenaSideDrawer()"
+              class="text-xs font-bold text-slate-400 hover:text-slate-700 cursor-pointer px-2"
+            >
+              ✕
+            </button>
+          </div>
+          <div id="arena-drawer-content" class="flex-1 overflow-y-auto p-4">
+            <!-- Populated by /practice.js -->
+          </div>
+        </aside>
+      </div>
+
+      <!-- B) QUESTION GRID NAVIGATOR POPOVER & BOTTOM BAR -->
+      <div
+        id="arena-grid-popover"
+        class="hidden absolute bottom-20 left-1/2 -translate-x-1/2 z-40 w-[360px] sm:w-[440px] max-w-[94vw] bg-white rounded-2xl border border-slate-200 shadow-2xl p-5 space-y-4"
+      >
+        <div class="flex items-center justify-between border-b border-slate-100 pb-2.5">
+          <span class="text-sm font-extrabold text-slate-900">Practice Session Navigator</span>
+          <button
+            type="button"
+            onclick="window.toggleArenaGridPopover()"
+            class="text-slate-400 hover:text-slate-700 cursor-pointer text-xs font-bold"
+          >
+            ✕
+          </button>
+        </div>
+
+        <!-- Status Legend -->
+        <div class="flex flex-wrap items-center gap-3 text-[11px] font-semibold text-slate-600 border-b border-slate-100 pb-2.5">
+          <span class="inline-flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-full bg-emerald-600"></span> Correct</span>
+          <span class="inline-flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-full bg-rose-600"></span> Incorrect</span>
+          <span class="inline-flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-full bg-blue-600"></span> Answered</span>
+          <span class="inline-flex items-center gap-1">🚩 For Review</span>
+        </div>
+
+        <!-- Numbered Question Squares -->
+        <div id="arena-grid-squares" class="flex flex-wrap gap-2 max-h-56 overflow-y-auto py-1">
+          <!-- Populated by /practice.js -->
+        </div>
+
+        <div class="pt-2 border-t border-slate-100 text-center">
+          <button
+            type="button"
+            onclick="window.submitPracticeSession()"
+            class="w-full py-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold cursor-pointer"
+          >
+            Finish & View Session Summary Report
+          </button>
+        </div>
+      </div>
+
+      <!-- Bottom Navigation Bar -->
+      <footer class="bg-white border-t border-slate-200 px-4 sm:px-8 h-16 flex items-center justify-between gap-4 shrink-0">
+        <div class="text-xs font-semibold text-slate-500 hidden sm:block">
+          Keyboard Shortcuts: <kbd class="px-1.5 py-0.5 bg-slate-100 border border-slate-300 rounded text-[10px] font-mono">A</kbd>–<kbd class="px-1.5 py-0.5 bg-slate-100 border border-slate-300 rounded text-[10px] font-mono">D</kbd> Select • <kbd class="px-1.5 py-0.5 bg-slate-100 border border-slate-300 rounded text-[10px] font-mono">←</kbd><kbd class="px-1.5 py-0.5 bg-slate-100 border border-slate-300 rounded text-[10px] font-mono">→</kbd> Navigate
+        </div>
+
+        <!-- Center Question Grid Pill (Matches Reference UI) -->
+        <button
+          type="button"
+          onclick="window.toggleArenaGridPopover()"
+          class="px-4 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold flex items-center gap-2 cursor-pointer shadow-xs"
+        >
+          <span id="arena-grid-pill-label">1 of 10</span>
+          <span class="text-[10px]">▴</span>
+        </button>
+
+        <!-- Right Navigation & Check/Submit Buttons -->
+        <div id="arena-bottom-actions" class="flex items-center gap-2">
+          <!-- Populated by /practice.js -->
+        </div>
+      </footer>
+
+    </div>
+
+    <!-- ======================================================================
+         FLOATING TI-84 PLUS CE ONLINE CALCULATOR MODAL & MINIMIZED FAB
+         ====================================================================== -->
+    <div
+      id="ti84-calculator-modal"
+      class="ti84-calculator-modal ti84-modal-hidden shadow-2xl"
+      role="dialog"
+      aria-label="TI-84 Plus CE Online Calculator"
+      aria-hidden="true"
+    >
+      <!-- Draggable Header Bar -->
+      <div id="ti84-header" class="ti84-header select-none" title="Drag to move calculator window anywhere on screen">
+        <div class="flex items-center gap-2 min-w-0">
+          <span class="text-base shrink-0">🧮</span>
+          <div class="min-w-0">
+            <div class="text-xs font-extrabold tracking-tight text-white truncate">
+              TI-84 Plus CE Calculator
+            </div>
+            <div class="text-[10px] text-slate-400 font-mono flex items-center gap-1">
+              <span>Drag header • Resize edges</span>
+              <span id="ti84-size-badge" class="text-emerald-400">400×600</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="flex items-center gap-1 shrink-0">
+          <button
+            type="button"
+            onclick="window.reloadTi84Handheld && window.reloadTi84Handheld()"
+            class="ti84-control-btn text-[11px] px-1.5 w-auto"
+            title="Reload TI-84 Plus CE Handheld Simulator"
+            aria-label="Reload TI-84 Simulator"
+          >
+            ↻
+          </button>
+          <button
+            type="button"
+            onclick="window.resizeTi84CalculatorByStep(-0.12)"
+            class="ti84-control-btn"
+            title="Shrink calculator window (−12%)"
+            aria-label="Shrink Calculator Window"
+          >
+            −
+          </button>
+          <button
+            type="button"
+            onclick="window.resizeTi84CalculatorByStep(0.12)"
+            class="ti84-control-btn"
+            title="Stretch / enlarge calculator window (+12%)"
+            aria-label="Stretch Calculator Window"
+          >
+            +
+          </button>
+          <button
+            type="button"
+            onclick="window.resizeTi84CalculatorByStep(0)"
+            class="ti84-control-btn text-[10px] px-1.5 w-auto"
+            title="Reset to default 400×600 window size"
+            aria-label="Reset Calculator Size"
+          >
+            1:1
+          </button>
+          <button
+            id="ti84-minimize-btn"
+            type="button"
+            onclick="window.minimizeTi84Calculator()"
+            class="ti84-control-btn"
+            title="Minimize into floating corner bubble"
+            aria-label="Minimize Calculator"
+          >
+            —
+          </button>
+          <button
+            id="ti84-expand-btn"
+            type="button"
+            onclick="window.toggleTi84SplitScreen()"
+            class="ti84-control-btn hidden sm:inline-flex"
+            title="Toggle 50vw Side-by-Side Split-Screen View"
+            aria-label="Toggle Split-Screen Calculator"
+          >
+            ⤢
+          </button>
+          <button
+            id="ti84-close-btn"
+            type="button"
+            onclick="window.closeTi84Calculator()"
+            class="ti84-control-btn ti84-close-btn"
+            title="Close Calculator (preserves calculations & graphs)"
+            aria-label="Close Calculator"
+          >
+            ✕
+          </button>
+        </div>
+      </div>
+
+      <!-- Mode Switcher Strip: TI-84 Plus CE vs Desmos Calculator -->
+      <div class="bg-slate-900 border-b border-slate-800 px-2.5 py-1.5 flex items-center justify-between gap-1.5 shrink-0">
+        <div class="flex items-center gap-1">
+          <button
+            id="ti84-tab-handheld"
+            type="button"
+            onclick="window.switchTi84Mode('handheld')"
+            class="px-2.5 py-1 rounded-md text-[11px] font-bold bg-blue-600 text-white cursor-pointer transition-colors"
+          >
+            🧮 TI-84 Plus CE
+          </button>
+          <button
+            id="ti84-tab-grapher"
+            type="button"
+            onclick="window.switchTi84Mode('grapher')"
+            class="px-2.5 py-1 rounded-md text-[11px] font-bold bg-slate-800 text-slate-300 hover:bg-slate-700 cursor-pointer transition-colors"
+          >
+            📈 Desmos (Instant Grapher &amp; Sci Calc)
+          </button>
+        </div>
+        <span class="text-[10px] font-mono text-emerald-400 hidden sm:inline">TI-84 / DESMOS</span>
+      </div>
+
+      <!-- Embedded TI-84 Plus CE & Desmos Simulator Body Container -->
+      <div class="ti84-body-container">
+        <iframe
+          id="ti84-frame"
+          src="https://ti84calc.com/ti84calc"
+          title="TI-84 Online Calculator"
+          width="100%"
+          height="100%"
+          frameborder="0"
+          allow="fullscreen; clipboard-read; clipboard-write"
+          style="width: 100%; height: 100%; border: none; display: block;"
+        ></iframe>
+
+        <!-- Desmos Graphing & Scientific Calculator Tab Body -->
+        <div
+          id="ti84-builtin-panel"
+          style="display: none; width: 100%; height: 100%; min-height: 500px;"
+        >
+          <iframe
+            id="desmos-frame"
+            src="https://www.desmos.com/calculator"
+            title="Desmos Graphing Calculator"
+            width="100%"
+            height="100%"
+            frameborder="0"
+            allow="fullscreen; clipboard-read; clipboard-write"
+            style="width: 100%; height: 100%; min-height: 500px; border: none; display: block;"
+          ></iframe>
+        </div>
+      </div>
+    </div>
+
+    <!-- Minimized Floating Action Bubble (#ti84-fab) -->
+    <button
+      id="ti84-fab"
+      type="button"
+      onclick="window.restoreTi84Calculator()"
+      class="ti84-fab hidden"
+      title="Restore TI-84 Plus CE Online Calculator"
+      aria-label="Restore TI-84 Plus CE Online Calculator"
+    >
+      <span class="text-base">🧮</span>
+      <span class="font-extrabold text-xs tracking-wide">TI-84</span>
+    </button>
+
+    <div id="mathprep-toast-container" class="toast-container"></div>
+    <script type="module" src="/src/main.tsx"></script>
+    <!-- Online TI-84 Plus CE Simulator Dragging & Window Manager -->
+    <script src="/calculator.js"></script>
+    <!-- Standalone Limmy AI & Auth Script -->
+    <script src="/app.js"></script>
+    <!-- Legacy Admin Helpers -->
+    <script src="/admin.js"></script>
+    <!-- Teacher Limmy AI Admin Agent -->
+    <script src="/admin-agent.js"></script>
+    <!-- Massive Question Bank Curation Engine (Modular Firebase SDK v11) -->
+    <script type="module" src="/admin-bank.js"></script>
+    <!-- Student Practice Hub, Session Launcher & Exam Simulation Engine -->
+    <script type="module" src="/practice.js"></script>
+  </body>
+</html>

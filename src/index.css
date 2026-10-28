@@ -1,0 +1,311 @@
+@layer base {
+  html, body {
+    max-width: 100% !important;
+    overflow-x: hidden !important;
+  }
+
+  body {
+    font-family: 'Plus Jakarta Sans', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  }
+
+  #root {
+    max-width: 100%;
+    overflow-x: hidden;
+  }
+
+  /* Responsive image, video, canvas, table & code element discipline */
+  img, svg, video, canvas, iframe {
+    max-width: 100%;
+    height: auto;
+  }
+
+  /* Make tables scroll internally on small mobile devices rather than stretching document width */
+  table {
+    display: block;
+    max-width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  /* Break long strings, formulas, URLs, and words on mobile */
+  p, h1, h2, h3, h4, h5, h6, span, button, a, label, li, td, th {
+    overflow-wrap: break-word;
+    word-break: break-word;
+  }
+}
+
+/* Authentic LaTeX math typography classes */
+.font-latex {
+  font-family: 'KaTeX_Main', 'KaTeX_Math', 'Latin Modern Math', 'Computer Modern', 'Times New Roman', serif;
+}
+
+/* Ensure KaTeX display equations wrap neatly and look crisp */
+.katex-display {
+  margin: 0.5em 0 !important;
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding: 0.25em 0;
+}
+
+.katex {
+  font-size: 1.05em;
+  text-rendering: auto;
+}
+
+/* Limmy AI Markdown & Socratic Message Typography */
+.limmy-message {
+  font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+  color: #1e293b;
+  line-height: 1.65;
+  font-size: 0.925rem;
+  word-break: break-word;
+}
+
+.limmy-message h1,
+.limmy-message h2,
+.limmy-message h3,
+.limmy-message h4 {
+  color: #0f172a;
+  font-weight: 700;
+  line-height: 1.35;
+  margin-top: 0.85rem;
+  margin-bottom: 0.4rem;
+}
+
+.limmy-message h1:first-child,
+.limmy-message h2:first-child,
+.limmy-message h3:first-child {
+  margin-top: 0.1rem;
+}
+
+.limmy-message h2 {
+  font-size: 1.05rem;
+  color: #1d4ed8;
+}
+
+.limmy-message h3 {
+  font-size: 0.975rem;
+  color: #334155;
+}
+
+.limmy-message p {
+  margin-top: 0.45rem;
+  margin-bottom: 0.45rem;
+}
+
+.limmy-message p:first-child {
+  margin-top: 0;
+}
+
+.limmy-message p:last-child {
+  margin-bottom: 0;
+}
+
+.limmy-message strong,
+.limmy-message b {
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.limmy-message ul,
+.limmy-message ol {
+  margin-top: 0.45rem;
+  margin-bottom: 0.45rem;
+  padding-left: 1.35rem;
+}
+
+.limmy-message ul {
+  list-style-type: disc;
+}
+
+.limmy-message ol {
+  list-style-type: decimal;
+}
+
+.limmy-message li {
+  margin-top: 0.25rem;
+  margin-bottom: 0.25rem;
+  padding-left: 0.2rem;
+  line-height: 1.55;
+}
+
+.limmy-message blockquote {
+  margin: 0.65rem 0;
+  padding: 0.5rem 0.85rem;
+  background-color: #f1f5f9;
+  border-left: 3.5px solid #2563eb;
+  border-radius: 0 0.5rem 0.5rem 0;
+  color: #334155;
+  font-style: italic;
+  font-size: 0.9rem;
+}
+
+.limmy-message code {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.85em;
+  background-color: #f1f5f9;
+  color: #0f172a;
+  padding: 0.15em 0.35em;
+  border-radius: 0.3rem;
+  border: 1px solid #e2e8f0;
+}
+
+.limmy-message .katex-display {
+  margin: 0.65rem 0 !important;
+  padding: 0.5rem 0.75rem;
+  background-color: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 0.5rem;
+  overflow-x: auto;
+  overflow-y: hidden;
+  text-align: center;
+}
+
+.limmy-message .katex {
+  color: #0f172a;
+}
+
+/* ========================================================
+   EMAIL VERIFICATION PERSISTENT BANNER & BADGES
+   ======================================================== */
+.verification-warning-banner {
+  background-color: #fffbeb;
+  border-bottom: 1px solid #fcd34d;
+  color: #78350f;
+  font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+  transition: all 0.2s ease-in-out;
+}
+
+.verification-warning-banner .banner-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.25rem 0.5rem;
+  background-color: #fef3c7;
+  color: #92400e;
+  font-weight: 700;
+  border-radius: 0.375rem;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.025em;
+}
+
+.verification-warning-banner .resend-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  padding: 0.375rem 0.75rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #ffffff;
+  background-color: #d97706;
+  border-radius: 0.375rem;
+  border: none;
+  cursor: pointer;
+  transition: background-color 0.15s ease;
+  white-space: nowrap;
+}
+
+.verification-warning-banner .resend-btn:hover:not(:disabled) {
+  background-color: #b45309;
+}
+
+.verification-warning-banner .resend-btn:disabled {
+  background-color: #fde68a;
+  color: #92400e;
+  cursor: not-allowed;
+  opacity: 0.85;
+}
+
+.verification-warning-banner .refresh-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  padding: 0.375rem 0.75rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #1e293b;
+  background-color: #ffffff;
+  border: 1px solid #cbd5e1;
+  border-radius: 0.375rem;
+  cursor: pointer;
+  transition: background-color 0.15s ease;
+  white-space: nowrap;
+}
+
+.verification-warning-banner .refresh-btn:hover {
+  background-color: #f8fafc;
+}
+
+.verification-warning-banner .close-btn {
+  padding: 0.25rem;
+  background: transparent;
+  border: none;
+  color: #92400e;
+  border-radius: 0.25rem;
+  cursor: pointer;
+}
+
+/* ========================================================
+   TOAST NOTIFICATION ALERTS
+   ======================================================== */
+.toast-container {
+  position: fixed;
+  bottom: 1.5rem;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 9999;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  pointer-events: none;
+  max-width: 90vw;
+  width: 440px;
+}
+
+.mathprep-toast {
+  pointer-events: auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.75rem 1rem;
+  border-radius: 0.75rem;
+  font-size: 0.825rem;
+  font-weight: 600;
+  line-height: 1.4;
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.12), 0 8px 10px -6px rgba(0, 0, 0, 0.08);
+  opacity: 0;
+  transform: translateY(16px);
+  transition: opacity 0.25s cubic-bezier(0.16, 1, 0.3, 1), transform 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+}
+
+.mathprep-toast.toast-show {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.mathprep-toast.toast-hide {
+  opacity: 0;
+  transform: translateY(12px);
+}
+
+.mathprep-toast.toast-success {
+  background-color: #065f46;
+  color: #ffffff;
+  border: 1px solid #059669;
+}
+
+.mathprep-toast.toast-warning {
+  background-color: #78350f;
+  color: #fef3c7;
+  border: 1px solid #d97706;
+}
+
+.mathprep-toast.toast-error {
+  background-color: #991b1b;
+  color: #ffffff;
+  border: 1px solid #dc2626;
+}
+
+
