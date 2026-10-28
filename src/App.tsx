@@ -4,6 +4,7 @@
  */
 
 import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { TopBar } from './components/TopBar';
 import { HomePage } from './components/HomePage';
 import { LessonsPage } from './components/LessonsPage';
@@ -15,10 +16,30 @@ import { AuthProvider, useAuth } from './context/AuthContext';
 import { VerificationBanner } from './components/VerificationBanner';
 import { AuthModal } from './components/AuthModal';
 import { PremiumLockModal } from './components/PremiumLockModal';
+import { AdminPaymentApprovals } from './components/AdminPaymentApprovals';
 import { PageId } from './types';
 import { Bot, Sparkles } from 'lucide-react';
 // @ts-ignore - JSX Client Component from app/checkout/page.jsx
 import CheckoutPage from '../app/checkout/page.jsx';
+
+function AdminPaymentsPortal() {
+  const [mountNode, setMountNode] = useState<HTMLElement | null>(null);
+
+  useEffect(() => {
+    const findMountNode = () => {
+      const el = document.getElementById('admin-payments-mount-point');
+      if (el) {
+        setMountNode(el);
+      }
+    };
+    findMountNode();
+    const interval = setInterval(findMountNode, 300);
+    return () => clearInterval(interval);
+  }, []);
+
+  if (!mountNode) return null;
+  return createPortal(<AdminPaymentApprovals />, mountNode);
+}
 
 function AppContent() {
   const [currentPage, setCurrentPage] = useState<PageId>('home');
@@ -188,7 +209,10 @@ function AppContent() {
         {currentPage === 'checkout' && <CheckoutPage />}
 
         {currentPage === 'admin' && (
-          <div id="admin-mount-point" className="w-full flex-1"></div>
+          <>
+            <div id="admin-mount-point" className="w-full flex-1"></div>
+            <AdminPaymentsPortal />
+          </>
         )}
       </main>
 
