@@ -143,6 +143,12 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         }
 
         // Real-time Firestore listener for isPremium and limmyAI_credits
+        const isAdmin = user.email?.toLowerCase() === 'searsokvarkhim1@gmail.com';
+        if (isAdmin) {
+          setIsPremium(true);
+          setLimmyCredits(9999);
+        }
+
         const userDocRef = doc(db, 'users', user.uid);
         if (unsubscribeProfile) unsubscribeProfile();
 
@@ -151,17 +157,17 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
           (docSnap) => {
             if (docSnap.exists()) {
               const data = docSnap.data();
-              setIsPremium(Boolean(data?.isPremium));
-              setLimmyCredits(typeof data?.limmyAI_credits === 'number' ? data.limmyAI_credits : 5);
+              setIsPremium(isAdmin || Boolean(data?.isPremium));
+              setLimmyCredits(isAdmin ? 9999 : (typeof data?.limmyAI_credits === 'number' ? data.limmyAI_credits : 5));
             } else {
-              // Initialize default free profile in Firestore
+              // Initialize default free profile in Firestore (or Premium if admin)
               setDoc(userDocRef, {
                 uid: user.uid,
                 email: user.email || '',
                 displayName: user.displayName || user.email?.split('@')[0] || 'Student',
                 targetScore: 5,
-                isPremium: false,
-                limmyAI_credits: 5,
+                isPremium: isAdmin ? true : false,
+                limmyAI_credits: isAdmin ? 9999 : 5,
                 createdAt: new Date().toISOString(),
                 updatedAt: new Date().toISOString(),
               }).catch((e) => console.warn('Could not write profile to Firestore:', e));
@@ -169,6 +175,11 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
           },
           (err) => {
             console.warn('Realtime profile listener error:', err);
+            // On quota error or read failure, preserve admin premium state
+            if (isAdmin) {
+              setIsPremium(true);
+              setLimmyCredits(9999);
+            }
           }
         );
       } else {

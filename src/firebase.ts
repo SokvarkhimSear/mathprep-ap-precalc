@@ -133,10 +133,20 @@ export async function fetchStudentProgress(userId: string): Promise<StudentProgr
   try {
     const snap = await getDoc(doc(db, 'users', userId, 'progress', 'main'));
     if (snap.exists()) {
-      return snap.data() as StudentProgress;
+      const data = snap.data() as StudentProgress;
+      try { localStorage.setItem(`mathprep_progress_${userId}`, JSON.stringify(data)); } catch (e) {}
+      return data;
     }
     return null;
-  } catch (err) {
+  } catch (err: any) {
+    if (err?.message && err.message.toLowerCase().includes('quota')) {
+      console.warn('[Firestore Quota] Free read limit reached, returning local cached student progress.');
+      try {
+        const cached = localStorage.getItem(`mathprep_progress_${userId}`);
+        if (cached) return JSON.parse(cached);
+      } catch (e) {}
+      return null;
+    }
     handleFirestoreError(err, OperationType.GET, path);
   }
 }
@@ -144,6 +154,7 @@ export async function fetchStudentProgress(userId: string): Promise<StudentProgr
 export async function saveStudentProgress(userId: string, progress: Partial<StudentProgress>): Promise<void> {
   const path = `users/${userId}/progress/main`;
   try {
+    localStorage.setItem(`mathprep_progress_${userId}`, JSON.stringify(progress));
     const existing = await getDoc(doc(db, 'users', userId, 'progress', 'main'));
     const baseData: StudentProgress = {
       userId,
@@ -163,7 +174,11 @@ export async function saveStudentProgress(userId: string, progress: Partial<Stud
     } else {
       await setDoc(doc(db, 'users', userId, 'progress', 'main'), baseData);
     }
-  } catch (err) {
+  } catch (err: any) {
+    if (err?.message && err.message.toLowerCase().includes('quota')) {
+      console.warn('[Firestore Quota] Free write limit reached, saved progress locally to localStorage.');
+      return;
+    }
     handleFirestoreError(err, OperationType.WRITE, path);
   }
 }
@@ -180,7 +195,11 @@ export async function saveExamAttempt(userId: string, attempt: { examId: string;
       percentage: attempt.percentage,
       completedAt: new Date().toISOString(),
     });
-  } catch (err) {
+  } catch (err: any) {
+    if (err?.message && err.message.toLowerCase().includes('quota')) {
+      console.warn('[Firestore Quota] Free write limit reached, skipping attempt Firestore persistence.');
+      return;
+    }
     handleFirestoreError(err, OperationType.CREATE, path);
   }
 }

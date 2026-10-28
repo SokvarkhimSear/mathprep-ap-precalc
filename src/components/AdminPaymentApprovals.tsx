@@ -59,12 +59,16 @@ export function AdminPaymentApprovals() {
   const [grantDaysInput, setGrantDaysInput] = useState<number>(30);
   const [grantingStatus, setGrantingStatus] = useState<boolean>(false);
 
+  // Quota Error State
+  const [quotaErrorNotice, setQuotaErrorNotice] = useState<boolean>(false);
+
   // Strict Admin Check
   const isAdmin = userEmail?.toLowerCase() === 'searsokvarkhim1@gmail.com' ||
     currentUser?.email?.toLowerCase() === 'searsokvarkhim1@gmail.com';
 
   const fetchAllData = async () => {
     setLoading(true);
+    setQuotaErrorNotice(false);
     try {
       // 1. Fetch Payment Submissions
       const subSnap = await getDocs(collection(db, 'payment_submissions'));
@@ -108,8 +112,11 @@ export function AdminPaymentApprovals() {
       userItems.sort((a, b) => (a.email || '').localeCompare(b.email || ''));
       setUsersList(userItems);
 
-    } catch (err) {
-      console.error('Error fetching admin data from Firebase:', err);
+    } catch (err: any) {
+      console.warn('Error fetching admin data from Firebase:', err);
+      if (err?.message && err.message.toLowerCase().includes('quota')) {
+        setQuotaErrorNotice(true);
+      }
     } finally {
       setLoading(false);
     }
@@ -363,6 +370,28 @@ export function AdminPaymentApprovals() {
           </button>
         </div>
       </div>
+
+      {/* Quota Exceeded Notice Banner */}
+      {quotaErrorNotice && (
+        <div className="p-4 bg-amber-50 border border-amber-300 rounded-2xl text-xs text-amber-950 space-y-2.5">
+          <div className="font-bold flex items-center gap-2 text-sm text-amber-900">
+            <span>⚠️ Firestore Free Read Quota Exceeded for Today</span>
+          </div>
+          <p className="leading-relaxed">
+            Your Firebase Firestore database has reached its daily free tier read quota (Spark plan free daily read limit). Quota limits automatically reset every 24 hours. You can inspect or manage your database directly in the Firebase Console:
+          </p>
+          <div>
+            <a
+              href="https://console.firebase.google.com/project/resolute-dialect-ns7sz/firestore/databases/ai-studio-mathprepapprecal-6d188591-6b33-4318-b288-3e07c81cc172/data?openUpgradeDialog=true"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1.5 font-bold text-blue-700 hover:text-blue-900 bg-white px-3.5 py-2 rounded-xl border border-amber-300 shadow-2xs transition-colors"
+            >
+              <span>Open Firebase Console Database Manager ↗</span>
+            </a>
+          </div>
+        </div>
+      )}
 
       {/* Main View Tabs (Submissions vs Users List vs Quick Grant) */}
       <div className="flex flex-wrap items-center gap-2 bg-slate-100 p-1 rounded-xl border border-slate-200">
