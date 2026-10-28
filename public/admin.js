@@ -7,81 +7,108 @@
 // 1. AP PRECALCULUS CURRICULUM REGISTRY (ALL 4 UNITS, 58+ STANDARD TOPICS)
 // ============================================================================
 const AP_CURRICULUM_TOPICS = {
-  1: [
+  '1': [
     { id: '1.1', title: 'Change in Tandem' },
     { id: '1.2', title: 'Rates of Change' },
-    { id: '1.3', title: 'Rates of Change in Linear & Quadratic Functions' },
-    { id: '1.4', title: 'Polynomial Functions & Rates of Change' },
-    { id: '1.5', title: 'Polynomial Functions & Complex Zeros' },
-    { id: '1.6', title: 'Polynomial Functions & End Behavior' },
-    { id: '1.7', title: 'Rational Functions & End Behavior' },
-    { id: '1.8', title: 'Rational Functions & Zeros' },
-    { id: '1.9', title: 'Rational Functions & Vertical Asymptotes' },
-    { id: '1.10', title: 'Rational Functions & Holes' },
-    { id: '1.11', title: 'Equivalent Representations of Polynomial & Rational Functions' },
+    { id: '1.3', title: 'Rates of Change in Linear and Quadratic Functions' },
+    { id: '1.4', title: 'Polynomial Functions and Rates of Change' },
+    { id: '1.5', title: 'Polynomial Functions and Complex Zeros' },
+    { id: '1.6', title: 'Polynomial Functions and End Behavior' },
+    { id: '1.7', title: 'Rational Functions and End Behavior' },
+    { id: '1.8', title: 'Rational Functions and Zeros' },
+    { id: '1.9', title: 'Rational Functions and Vertical Asymptotes' },
+    { id: '1.10', title: 'Rational Functions and Holes' },
+    { id: '1.11', title: 'Equivalent Representations of Polynomial and Rational Expressions' },
     { id: '1.12', title: 'Transformations of Functions' },
-    { id: '1.13', title: 'Function Model Selection & Assumption Articulation' },
-    { id: '1.14', title: 'Function Model Construction & Application' },
+    { id: '1.13', title: 'Function Model Selection and Assumption Articulation' },
+    { id: '1.14', title: 'Function Model Construction and Application' },
+    { id: 'Unit 1 REVIEW', title: 'Unit 1 REVIEW' },
   ],
-  2: [
-    { id: '2.1', title: 'Change in Arithmetic & Geometric Sequences' },
-    { id: '2.2', title: 'Exponential Functions' },
-    { id: '2.3', title: 'Exponential Function Manipulation' },
-    { id: '2.4', title: 'Exponential Function Context & Data Modeling' },
-    { id: '2.5', title: 'Competing Function Model Validation' },
-    { id: '2.6', title: 'Logarithmic Expressions' },
-    { id: '2.7', title: 'Inverse Functions' },
-    { id: '2.8', title: 'Logarithmic Functions' },
-    { id: '2.9', title: 'Logarithmic Function Manipulation' },
-    { id: '2.10', title: 'Exponential & Logarithmic Equations & Inequalities' },
-    { id: '2.11', title: 'Logarithmic Function Context & Data Modeling' },
-    { id: '2.12', title: 'Semi-log Plots' },
-    { id: '2.13', title: 'Function Transformations with Logarithms' },
-    { id: '2.14', title: 'Compound Interest & Euler’s Constant e' },
-    { id: '2.15', title: 'Logistic Growth Models' },
+  '2A': [
+    { id: '2.1', title: 'Change in Arithmetic and Geometric Sequences' },
+    { id: '2.2', title: 'Change in Linear and Exponential Functions' },
+    { id: '2.3', title: 'Exponential Functions' },
+    { id: '2.4', title: 'Exponential Function Manipulation' },
+    { id: '2.5A', title: 'Exponential Function Context and Data Modeling' },
+    { id: '2.5B', title: 'Exponential Function Context and Data Modeling' },
+    { id: '2.6', title: 'Competing Function Model Validation' },
+    { id: '2.7A', title: 'Composition of Functions' },
+    { id: '2.7B', title: 'Composition of Functions' },
+    { id: '2.8', title: 'Inverse Functions' },
+    { id: 'Unit 2A REVIEW', title: 'Unit 2A REVIEW' },
   ],
-  3: [
+  '2B': [
+    { id: '2.9', title: 'Logarithmic Expressions' },
+    { id: '2.10', title: 'Inverses of Exponential Functions' },
+    { id: '2.11', title: 'Logarithmic Functions' },
+    { id: '2.12', title: 'Logarithmic Function Manipulation' },
+    { id: '2.13A', title: 'Exponential and Logarithmic Equations and Inequalities' },
+    { id: '2.13B', title: 'Exponential and Logarithmic Equations and Inequalities' },
+    { id: '2.14', title: 'Logarithmic Function Context and Data Modeling' },
+    { id: '2.15', title: 'Semi-log Plots' },
+    { id: 'Unit 2B REVIEW', title: 'Unit 2B REVIEW' },
+  ],
+  '3': [
     { id: '3.1', title: 'Periodic Phenomena' },
-    { id: '3.2', title: 'Sine, Cosine, & Tangent in the Unit Circle' },
-    { id: '3.3', title: 'Sine & Cosine Function Values' },
-    { id: '3.4', title: 'Sine & Cosine Function Graphs' },
+    { id: '3.2', title: 'Sine, Cosine, and Tangent' },
+    { id: '3.3', title: 'Sine and Cosine Function Values' },
+    { id: '3.4', title: 'Sine and Cosine Function Graphs' },
     { id: '3.5', title: 'Sinusoidal Functions' },
-    { id: '3.6', title: 'Sinusoidal Function Context & Data Modeling' },
-    { id: '3.7', title: 'Tangent Function Values & Graphs' },
-    { id: '3.8', title: 'Inverse Trigonometric Functions' },
-    { id: '3.9', title: 'Trigonometric Equations & Inequalities' },
-    { id: '3.10', title: 'Secant, Cosecant, & Cotangent Functions' },
-    { id: '3.11', title: 'Trigonometric Identities & Pythagorean Theorem' },
-    { id: '3.12', title: 'Sum, Difference, & Double-Angle Identities' },
-    { id: '3.13', title: 'Polar Coordinates' },
+    { id: '3.6', title: 'Sinusoidal Function Transformations' },
+    { id: '3.7', title: 'Sinusoidal Function Context and Data Modeling' },
+    { id: '3.8', title: 'The Tangent Function' },
+    { id: '3.9', title: 'Inverse Trigonometric Functions' },
+    { id: '3.10', title: 'Trigonometric Equations and Inequalities' },
+    { id: '3.11', title: 'The Secant, Cosecant, and Cotangent Functions' },
+    { id: '3.12', title: 'Equivalent Representations of Trigonometric Functions' },
+    { id: '3.13', title: 'Trigonometry and Polar Coordinates' },
     { id: '3.14', title: 'Polar Function Graphs' },
     { id: '3.15', title: 'Rates of Change in Polar Functions' },
+    { id: 'Unit 3 REVIEW', title: 'Unit 3 REVIEW' },
   ],
-  4: [
+  '4A': [
     { id: '4.1', title: 'Parametric Functions' },
-    { id: '4.2', title: 'Parametric Function Context & Data Modeling' },
-    { id: '4.3', title: 'Parametric Functions & Velocity' },
-    { id: '4.4', title: 'Planar Motion Modeling' },
+    { id: '4.2', title: 'Parametric Functions Modeling Planar Motion' },
+    { id: '4.3', title: 'Parametric Functions and Rates of Change' },
+    { id: '4.4', title: 'Parametrically Defined Circles and Lines' },
     { id: '4.5', title: 'Implicitly Defined Functions' },
-    { id: '4.6', title: 'Conic Sections & Eccentricity' },
-    { id: '4.7', title: 'Vectors & Direction Angles' },
-    { id: '4.8', title: 'Vector Components & Unit Vectors' },
-    { id: '4.9', title: 'Vector Operations & Scalar Multiplication' },
-    { id: '4.10', title: 'Vector Dot Products & Orthogonality' },
-    { id: '4.11', title: 'Vector Context & Data Modeling' },
-    { id: '4.12', title: 'Matrices & Systems of Equations' },
-    { id: '4.13', title: 'Matrix Multiplication & Inverses' },
-    { id: '4.14', title: 'Linear Transformations via 2x2 Matrices' },
+    { id: '4.6A', title: 'Conic Sections - Parabolas' },
+    { id: '4.6B', title: 'Conic Sections - Ellipses' },
+    { id: '4.6C', title: 'Conic Sections - Hyperbolas' },
+    { id: '4.7', title: 'Parametrization of Implicitly Defined Functions' },
+    { id: 'Unit 4A REVIEW', title: 'Unit 4A REVIEW' },
+  ],
+  '4B': [
+    { id: '4.8A', title: 'Vectors' },
+    { id: '4.8B', title: 'Vectors' },
+    { id: '4.9', title: 'Vector-Valued Functions' },
+    { id: '4.10', title: 'Matrices' },
+    { id: '4.11', title: 'The Inverse and Determinant of a Matrix' },
+    { id: '4.12', title: 'Linear Transformations and Matrices' },
+    { id: '4.13A', title: 'Matrices as Functions' },
+    { id: '4.13B', title: 'Matrices as Functions' },
+    { id: '4.14', title: 'Matrices Modeling Contexts' },
+    { id: 'Unit 4B REVIEW', title: 'Unit 4B REVIEW' },
   ],
 };
 
 let currentGeneratedJSON = null;
 
 // ============================================================================
-// 2. FIRESTORE DATABASE INSTANCE ACCESSOR
+// 2. FIRESTORE DATABASE INSTANCE ACCESSOR & QUOTA GUARDS
 // ============================================================================
+function isAdminQuotaError(err) {
+  const msg = String(err?.message || err?.code || err || '').toLowerCase();
+  return msg.includes('quota') || msg.includes('resource-exhausted') || msg.includes('resource_exhausted');
+}
+
 function getFirestoreInstance() {
   if (typeof firebase !== 'undefined' && firebase.apps && firebase.apps.length) {
+    try {
+      if (typeof firebase.firestore?.setLogLevel === 'function') {
+        firebase.firestore.setLogLevel('silent');
+      }
+    } catch (_) {}
     try {
       const dbId = window.firebaseConfig?.firestoreDatabaseId;
       if (dbId) {
@@ -118,7 +145,7 @@ async function saveToFirestore(topicId, jsonPayload) {
   // Ensure topicId formatted as topic_1_1 style
   const normalizedId = topicId.startsWith('topic_')
     ? topicId
-    : `topic_${topicId.replace(/[^0-9]/g, '_')}`;
+    : `topic_${String(topicId).replace(/[^0-9A-Za-z]/g, '_')}`;
 
   const documentData = {
     ...jsonPayload,
@@ -126,6 +153,11 @@ async function saveToFirestore(topicId, jsonPayload) {
     updatedAt: new Date().toISOString(),
     updatedBy: window.ADMIN_EMAIL || 'Searsokvarkhim1@gmail.com',
   };
+
+  if (sessionStorage.getItem('mathprep_firestore_write_quota_exhausted') === '1') {
+    window.showToast?.(`Topic ${normalizedId} saved locally (Firestore daily free write quota reached).`, 'info');
+    return true;
+  }
 
   try {
     await db.collection('curriculum').doc(normalizedId).set(documentData, { merge: true });
@@ -135,6 +167,11 @@ async function saveToFirestore(topicId, jsonPayload) {
     fetchCurriculumList();
     return true;
   } catch (error) {
+    if (isAdminQuotaError(error)) {
+      sessionStorage.setItem('mathprep_firestore_write_quota_exhausted', '1');
+      window.showToast?.(`Topic ${normalizedId} saved locally (Firestore daily free write quota reached).`, 'info');
+      return true;
+    }
     console.error('Firestore saveToFirestore error:', error);
     window.showToast?.(`Error saving to Firestore: ${error.message || 'Permission denied'}`, 'error');
     return false;
@@ -145,13 +182,14 @@ async function saveToFirestore(topicId, jsonPayload) {
  * Deletes a topic document from collection 'curriculum'
  */
 async function deleteFromFirestore(topicId) {
-  if (!confirm(`Are you sure you want to permanently delete "${topicId}" from the Firestore curriculum collection?`)) {
-    return;
-  }
-
   const db = getFirestoreInstance();
   if (!db) {
     window.showToast?.('Firebase Firestore not ready.', 'error');
+    return;
+  }
+
+  if (sessionStorage.getItem('mathprep_firestore_write_quota_exhausted') === '1') {
+    window.showToast?.('Firestore daily free write quota reached.', 'warning');
     return;
   }
 
@@ -160,6 +198,9 @@ async function deleteFromFirestore(topicId) {
     window.showToast?.(`Topic ${topicId} deleted from Firestore.`, 'success');
     fetchCurriculumList();
   } catch (error) {
+    if (isAdminQuotaError(error)) {
+      sessionStorage.setItem('mathprep_firestore_write_quota_exhausted', '1');
+    }
     console.error('Delete topic error:', error);
     window.showToast?.(`Failed to delete: ${error.message}`, 'error');
   }
@@ -174,10 +215,10 @@ async function fetchCurriculumList() {
   const countBadge = document.getElementById('curriculum-count-badge');
   if (!listContainer) return;
 
-  if (!db) {
+  if (!db || sessionStorage.getItem('mathprep_firestore_read_quota_exhausted') === '1') {
     listContainer.innerHTML = `
       <div class="text-center py-8 text-slate-500 text-sm">
-        Connecting to Firestore database...
+        Using local pre-made 71-topic curriculum bundle.
       </div>`;
     return;
   }

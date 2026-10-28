@@ -43,7 +43,7 @@ function AdminPaymentsPortal() {
 
 function AppContent() {
   const [currentPage, setCurrentPage] = useState<PageId>('home');
-  const [selectedUnit, setSelectedUnit] = useState<number | null>(null);
+  const [selectedUnit, setSelectedUnit] = useState<string | number | null>(null);
   const [isLimmyOpen, setIsLimmyOpen] = useState<boolean>(false);
   const [limmyContext, setLimmyContext] = useState<string | null>(null);
 
@@ -83,7 +83,7 @@ function AppContent() {
     return () => window.removeEventListener('hashchange', parseHash);
   }, []);
 
-  const handleNavigate = (page: PageId, unitFilter?: number | null) => {
+  const handleNavigate = (page: PageId, unitFilter?: string | number | null) => {
     setCurrentPage(page);
     if (unitFilter !== undefined) {
       setSelectedUnit(unitFilter);
@@ -107,7 +107,8 @@ function AppContent() {
       if (unitFilter) {
         const unitSel = document.getElementById('practice-filter-unit') as HTMLSelectElement | null;
         if (unitSel) {
-          unitSel.value = `unit_${unitFilter}`;
+          const valStr = typeof unitFilter === 'string' && unitFilter.startsWith('unit_') ? unitFilter : `unit_${unitFilter}`;
+          unitSel.value = valStr;
           unitSel.dispatchEvent(new Event('change'));
         }
       }
@@ -191,8 +192,14 @@ function AppContent() {
           <ProgressTrackerPage
             onNavigate={handleNavigate}
             onSelectTopicLesson={(topicCode) => {
-              const unitNum = parseInt(String(topicCode).split('.')[0], 10) || 1;
-              handleNavigate('lessons', unitNum);
+              const win = window as unknown as {
+                getUnitIdForTopic?: (code: string) => string;
+              };
+              const unitId =
+                typeof win.getUnitIdForTopic === 'function'
+                  ? win.getUnitIdForTopic(topicCode)
+                  : `unit_${parseInt(String(topicCode).split('.')[0], 10) || 1}`;
+              handleNavigate('lessons', unitId);
             }}
           />
         )}

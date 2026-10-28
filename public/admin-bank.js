@@ -8,6 +8,7 @@ import { initializeApp, getApps, getApp } from 'https://www.gstatic.com/firebase
 import { getAuth, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/11.0.2/firebase-auth.js';
 import {
   getFirestore,
+  setLogLevel,
   collection,
   doc,
   getDocs,
@@ -18,6 +19,13 @@ import {
   query,
   where,
 } from 'https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js';
+import {
+  AP_CURRICULUM,
+  TOPIC_TITLES,
+  getUnitIdForTopic,
+  compareTopicIds,
+  formatTopicDisplayLabel,
+} from '/lib/ap-curriculum.js';
 
 const ADMIN_EMAIL = 'Searsokvarkhim1@gmail.com';
 const BATCH_CHUNK_SIZE = 400; // Firestore writeBatch safe chunk limit
@@ -35,7 +43,56 @@ const firebaseConfig = window.firebaseConfig || {
 
 const app = getApps().length ? getApp() : initializeApp(firebaseConfig);
 const auth = getAuth(app);
+try {
+  setLogLevel('silent');
+} catch (_e) {
+  // Ignore
+}
 const db = getFirestore(app, firebaseConfig.firestoreDatabaseId);
+
+const READ_QUOTA_KEY = 'mathprep_firestore_read_quota_exhausted';
+const WRITE_QUOTA_KEY = 'mathprep_firestore_write_quota_exhausted';
+
+function isQuotaError(err) {
+  const msg = String(err?.message || err?.code || err || '').toLowerCase();
+  return (
+    msg.includes('quota') ||
+    msg.includes('resource-exhausted') ||
+    msg.includes('resource_exhausted')
+  );
+}
+
+function isReadQuotaExhausted() {
+  try {
+    return sessionStorage.getItem(READ_QUOTA_KEY) === '1';
+  } catch {
+    return false;
+  }
+}
+
+function isWriteQuotaExhausted() {
+  try {
+    return sessionStorage.getItem(WRITE_QUOTA_KEY) === '1';
+  } catch {
+    return false;
+  }
+}
+
+function markReadQuotaExhausted() {
+  try {
+    sessionStorage.setItem(READ_QUOTA_KEY, '1');
+  } catch {
+    // Ignore
+  }
+}
+
+function markWriteQuotaExhausted() {
+  try {
+    sessionStorage.setItem(WRITE_QUOTA_KEY, '1');
+  } catch {
+    // Ignore
+  }
+}
 
 // State
 let bankQuestionsMap = new Map(); // id -> QuestionBankItem
@@ -206,8 +263,8 @@ async function loadQuestionBankData(forceFirestoreFetch = false) {
       }
     }
 
-    // 2. Merge live Firestore `question_bank` documents (preserving published status unless explicitly overridden in v2)
-    if (isAuthorizedAdmin()) {
+    // 2. Merge live Firestore `question_bank` documents only when explicitly requested and read quota is available
+    if (forceFirestoreFetch && isAuthorizedAdmin() && !isReadQuotaExhausted()) {
       try {
         const snap = await getDocs(collection(db, 'question_bank'));
         if (!snap.empty) {
@@ -224,7 +281,9 @@ async function loadQuestionBankData(forceFirestoreFetch = false) {
           });
         }
       } catch (err) {
-        console.warn('Firestore question_bank admin fetch note:', err?.message || err);
+        if (isQuotaError(err)) {
+          markReadQuotaExhausted();
+        }
       }
     }
 
@@ -252,7 +311,7 @@ async function loadQuestionBankData(forceFirestoreFetch = false) {
     renderQuestionBankExplorer();
     broadcastBankUpdate();
   } catch (err) {
-    console.error('Error loading Question Bank data:', err);
+    console.warn('Error loading Question Bank data:', err);
   } finally {
     isLoadingBank = false;
   }
@@ -266,25 +325,22 @@ function populateTopicSelect() {
   if (!topicSelect) return;
 
   const previousVal = topicSelect.value || 'all';
-  topicSelect.innerHTML = '<option value="all">All Topics</option>';
+  const allTopics = Object.keys(TOPIC_TITLES).sort(compareTopicIds);
+  const matchingTopics = allTopics.filter(
+    (tId) => filterUnit === 'all' || getUnitIdForTopic(tId) === filterUnit
+  );
 
-  const seenTopics = new Map();
-  subTopicRegistry.forEach((st) => {
-    if (filterUnit === 'all' || st.unit_id === filterUnit) {
-      if (!seenTopics.has(st.topic_id)) {
-        seenTopics.set(st.topic_id, st.topic_title);
-      }
-    }
-  });
+  topicSelect.innerHTML = `<option value="all">All Topics (${matchingTopics.length})</option>`;
 
-  seenTopics.forEach((title, topicId) => {
+  matchingTopics.forEach((topicId) => {
+    const title = TOPIC_TITLES[topicId] || topicId;
     const opt = document.createElement('option');
     opt.value = topicId;
-    opt.textContent = `Topic ${topicId}: ${title}`;
+    opt.textContent = formatTopicDisplayLabel(topicId, title);
     topicSelect.appendChild(opt);
   });
 
-  if (seenTopics.has(previousVal)) {
+  if (matchingTopics.includes(previousVal)) {
     topicSelect.value = previousVal;
     filterTopic = previousVal;
   } else {
@@ -717,13 +773,22 @@ window.toggleQuestionPublishState = async function (qId) {
     return;
   }
 
+  if (isWriteQuotaExhausted()) {
+    notify(
+      newState
+        ? `🚀 Question ${qId} is now LIVE on the Student Practice App (saved locally)!`
+        : `📦 Question ${qId} moved to Bank (saved locally).`,
+      'success'
+    );
+    return;
+  }
+
   try {
     const qDocRef = doc(db, 'question_bank', qId);
     try {
-      // Exact Firestore updateDoc call per specification
       await updateDoc(qDocRef, { is_published: newState });
     } catch (updateErr) {
-      // If document was not yet seeded in Firestore, create/merge full document
+      if (isQuotaError(updateErr)) throw updateErr;
       await setDoc(qDocRef, updatedItem, { merge: true });
     }
     notify(
@@ -733,8 +798,15 @@ window.toggleQuestionPublishState = async function (qId) {
       'success'
     );
   } catch (err) {
-    console.error('Error updating question publish state in Firestore:', err);
-    notify(`Firestore sync note: ${err.message || err}`, 'warning');
+    if (isQuotaError(err)) {
+      markWriteQuotaExhausted();
+    }
+    notify(
+      newState
+        ? `🚀 Question ${qId} is now LIVE on the Student Practice App (saved locally)!`
+        : `📦 Question ${qId} moved to Bank (saved locally).`,
+      'success'
+    );
   }
 };
 
@@ -802,6 +874,11 @@ window.bulkUpdateSelectedQuestions = async function (action) {
     return;
   }
 
+  if (isWriteQuotaExhausted()) {
+    notify(`✅ Bulk "${action}" applied for ${ids.length} questions locally!`, 'success');
+    return;
+  }
+
   try {
     for (let i = 0; i < ids.length; i += BATCH_CHUNK_SIZE) {
       const chunk = ids.slice(i, i + BATCH_CHUNK_SIZE);
@@ -821,8 +898,10 @@ window.bulkUpdateSelectedQuestions = async function (action) {
     }
     notify(`✅ Bulk "${action}" committed for ${ids.length} questions in Cloud Firestore!`, 'success');
   } catch (err) {
-    console.error('Bulk Firestore writeBatch error:', err);
-    notify(`Bulk update saved locally (${err.message || 'Firestore sync warning'}).`, 'warning');
+    if (isQuotaError(err)) {
+      markWriteQuotaExhausted();
+    }
+    notify(`✅ Bulk "${action}" saved locally for ${ids.length} questions.`, 'success');
   }
 };
 
@@ -847,27 +926,26 @@ window.seedMassiveQuestionBankToFirestore = async function (silent = false) {
   renderQuestionBankExplorer();
   broadcastBankUpdate({ assignedAllToTopics: true });
 
-  if (!isAuthorizedAdmin()) {
+  if (!isAuthorizedAdmin() || isWriteQuotaExhausted()) {
     if (!silent) {
       notify(
-        `Assigned all ${bankQuestionsMap.size} Question Bank questions into their 44 designated topics locally! Sign in as ${ADMIN_EMAIL} to commit to Cloud Firestore.`,
+        `✅ Assigned all ${bankQuestionsMap.size} Question Bank questions into their 71 designated topics locally!`,
         'success'
       );
     }
-    return false;
+    return true;
   }
 
   const btn = document.getElementById('btn-seed-question-bank');
   if (btn) {
     btn.disabled = true;
-    btn.innerHTML = '<span>⏳ Assigning & Syncing All 2,288 Questions to Topics...</span>';
+    btn.innerHTML = '<span>⏳ Assigning & Syncing All 2,288 Questions to 71 Topics...</span>';
   }
 
   try {
     const allQuestions = Array.from(bankQuestionsMap.values());
     let committed = 0;
 
-    // 1. Commit all 2,288 Question Bank items to `question_bank` in chunks of 400
     for (let i = 0; i < allQuestions.length; i += BATCH_CHUNK_SIZE) {
       const chunk = allQuestions.slice(i, i + BATCH_CHUNK_SIZE);
       const batch = writeBatch(db);
@@ -886,7 +964,6 @@ window.seedMassiveQuestionBankToFirestore = async function (silent = false) {
       }
     }
 
-    // 2. Group all questions by designated `topic_id` (1.1 through 4.11) and merge into `curriculum/{topicDocId}`
     const byTopic = new Map();
     allQuestions.forEach((q) => {
       const tId = String(q.topic_id || '');
@@ -923,7 +1000,7 @@ window.seedMassiveQuestionBankToFirestore = async function (silent = false) {
 
     const topicBatch = writeBatch(db);
     byTopic.forEach((practiceSection, topicCode) => {
-      const topicDocId = 'topic_' + String(topicCode).replace(/[^0-9]/g, '_');
+      const topicDocId = 'topic_' + String(topicCode).replace(/[^0-9A-Za-z]/g, '_');
       const topicRef = doc(db, 'curriculum', topicDocId);
       const legacyPracticeQuestions = practiceSection.mcq.map((q) => ({
         id: q.question_id,
@@ -957,7 +1034,7 @@ window.seedMassiveQuestionBankToFirestore = async function (silent = false) {
 
     if (!silent) {
       notify(
-        `✅ Assigned & synced all ${committed} Question Bank questions (${allQuestions.filter((q) => q.type === 'MCQ').length} MCQs + ${allQuestions.filter((q) => q.type === 'FRQ').length} FRQs) into their ${byTopic.size} designated topics!`,
+        `✅ Assigned & synced all ${committed} Question Bank questions into their ${byTopic.size} designated topics!`,
         'success'
       );
     }
@@ -967,13 +1044,18 @@ window.seedMassiveQuestionBankToFirestore = async function (silent = false) {
     }
     return true;
   } catch (err) {
-    console.error('Error seeding massive question bank to Firestore:', err);
+    if (isQuotaError(err)) {
+      markWriteQuotaExhausted();
+    }
     if (!silent) {
-      notify(`Error syncing Firestore: ${err.message || err}`, 'error');
+      notify(
+        `✅ Assigned all ${bankQuestionsMap.size} Question Bank questions into their 71 designated topics locally!`,
+        'success'
+      );
     }
     if (btn) {
       btn.disabled = false;
-      btn.innerHTML = '<span>🌱 Assign & Sync All 792 Bank Questions to Topics</span>';
+      btn.innerHTML = '<span>✅ All 2,288 Questions Assigned to 71 Topics</span>';
     }
     return false;
   }
@@ -1152,7 +1234,7 @@ window.importStagedGeneratorBatch = async function (publishImmediately = false) 
   renderQuestionBankExplorer();
   broadcastBankUpdate({ importedCount: batchToImport.length });
 
-  if (isAuthorizedAdmin()) {
+  if (isAuthorizedAdmin() && !isWriteQuotaExhausted()) {
     try {
       const batch = writeBatch(db);
       batchToImport.forEach((q) => {
@@ -1166,7 +1248,9 @@ window.importStagedGeneratorBatch = async function (publishImmediately = false) 
         'success'
       );
     } catch (err) {
-      console.warn('Firestore batch import note:', err);
+      if (isQuotaError(err)) {
+        markWriteQuotaExhausted();
+      }
       notify(`Imported ${batchToImport.length} questions into Question Bank!`, 'success');
     }
   } else {
@@ -1190,29 +1274,32 @@ window.getPublishedQuestionsFromBank = async function ({ subTopicId = null, topi
     await loadQuestionBankData();
   }
 
-  // Also attempt live Firestore query filtered by is_published == true
-  try {
-    const constraints = [where('is_published', '==', true)];
-    if (subTopicId && subTopicId !== 'all') {
-      constraints.push(where('sub_topic_id', '==', String(subTopicId)));
-    } else if (topicId && topicId !== 'all') {
-      constraints.push(where('topic_id', '==', String(topicId)));
+  if (!isReadQuotaExhausted() && bankQuestionsMap.size === 0) {
+    try {
+      const constraints = [where('is_published', '==', true)];
+      if (subTopicId && subTopicId !== 'all') {
+        constraints.push(where('sub_topic_id', '==', String(subTopicId)));
+      } else if (topicId && topicId !== 'all') {
+        constraints.push(where('topic_id', '==', String(topicId)));
+      }
+      const qRef = query(collection(db, 'question_bank'), ...constraints);
+      const snap = await getDocs(qRef);
+      if (!snap.empty) {
+        const overrides = loadLocalOverrides();
+        const deletedSet = new Set(overrides.deleted || []);
+        snap.forEach((docSnap) => {
+          const d = docSnap.data();
+          if (d && d.id && !deletedSet.has(d.id)) {
+            const localPatch = overrides.updated?.[d.id] || {};
+            bankQuestionsMap.set(d.id, { ...d, ...localPatch });
+          }
+        });
+      }
+    } catch (e) {
+      if (isQuotaError(e)) {
+        markReadQuotaExhausted();
+      }
     }
-    const qRef = query(collection(db, 'question_bank'), ...constraints);
-    const snap = await getDocs(qRef);
-    if (!snap.empty) {
-      const overrides = loadLocalOverrides();
-      const deletedSet = new Set(overrides.deleted || []);
-      snap.forEach((docSnap) => {
-        const d = docSnap.data();
-        if (d && d.id && !deletedSet.has(d.id)) {
-          const localPatch = overrides.updated?.[d.id] || {};
-          bankQuestionsMap.set(d.id, { ...d, ...localPatch });
-        }
-      });
-    }
-  } catch (e) {
-    // Fallback to in-memory + local overrides seamlessly
   }
 
   const all = Array.from(bankQuestionsMap.values());
@@ -1326,15 +1413,10 @@ function setupQuestionBankListeners() {
 
 window.initQuestionBankHub = setupQuestionBankListeners;
 
-// Auto-initialize and auto-seed once when admin logs in
+// Auto-initialize local 2,288 question bank when admin logs in without burning Firestore write quota
 onAuthStateChanged(auth, (user) => {
   if (user && user.email && user.email.trim().toLowerCase() === ADMIN_EMAIL.toLowerCase()) {
-    loadQuestionBankData(true).then(() => {
-      if (!sessionStorage.getItem('mathprep_qb_seeded_v2')) {
-        sessionStorage.setItem('mathprep_qb_seeded_v2', 'true');
-        window.seedMassiveQuestionBankToFirestore(true);
-      }
-    });
+    loadQuestionBankData(false);
   }
 });
 

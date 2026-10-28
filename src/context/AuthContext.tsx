@@ -11,8 +11,15 @@ import {
   sendPasswordResetEmail,
   onAuthStateChanged,
   User,
+  isQuotaError,
+  isReadQuotaExhausted,
+  isWriteQuotaExhausted,
+  markReadQuotaExhausted,
+  markWriteQuotaExhausted,
+  isAlwaysPremiumEmail,
+  ALWAYS_PREMIUM_EMAILS,
 } from '../firebase';
-import { doc, getDoc, setDoc, updateDoc, onSnapshot } from 'firebase/firestore';
+import { doc, setDoc, updateDoc, onSnapshot } from 'firebase/firestore';
 
 interface AuthContextType {
   currentUser: User | null;
@@ -48,6 +55,58 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
+function getLocalUserProfile(uid: string, email: string | null) {
+  try {
+    const raw = localStorage.getItem(`mathprep_user_profile_${uid}`);
+    if (raw) return JSON.parse(raw);
+    if (email) {
+      const byEmail = localStorage.getItem(`mathprep_user_profile_email_${email.toLowerCase()}`);
+      if (byEmail) return JSON.parse(byEmail);
+    }
+  } catch {}
+  return null;
+}
+
+function saveLocalUserProfile(uid: string, email: string | null, data: Record<string, any>) {
+  try {
+    localStorage.setItem(`mathprep_user_profile_${uid}`, JSON.stringify(data));
+    if (email) {
+      localStorage.setItem(`mathprep_user_profile_email_${email.toLowerCase()}`, JSON.stringify(data));
+    }
+    // Also maintain a local directory of known users for the Admin Console when Firestore quota is reached
+    const rawList = localStorage.getItem('mathprep_local_users_directory');
+    const dir: Record<string, any> = rawList ? JSON.parse(rawList) : {};
+    const key = (email || uid).toLowerCase();
+    dir[key] = { ...(dir[key] || {}), ...data, uid, email: email || data.email || '' };
+    localStorage.setItem('mathprep_local_users_directory', JSON.stringify(dir));
+  } catch {}
+}
+
+function seedGuaranteedPremiumProfiles() {
+  try {
+    const rawList = localStorage.getItem('mathprep_local_users_directory');
+    const dir: Record<string, any> = rawList ? JSON.parse(rawList) : {};
+    ALWAYS_PREMIUM_EMAILS.forEach((email) => {
+      const key = email.toLowerCase();
+      const existing = dir[key] || {};
+      const cleanId = existing.uid || existing.id || key.replace(/[^a-zA-Z0-9_\-]/g, '_');
+      const profile = {
+        ...existing,
+        id: cleanId,
+        uid: cleanId,
+        email: key,
+        displayName: existing.displayName || (key === 'searsokvarkhim1@gmail.com' ? 'searsokvarkhim1 (Admin)' : key.split('@')[0]),
+        isPremium: true,
+        limmyAI_credits: 9999,
+        updatedAt: existing.updatedAt || new Date().toISOString(),
+      };
+      dir[key] = profile;
+      localStorage.setItem(`mathprep_user_profile_email_${key}`, JSON.stringify(profile));
+    });
+    localStorage.setItem('mathprep_local_users_directory', JSON.stringify(dir));
+  } catch {}
+}
+
 export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
@@ -66,7 +125,10 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const [authModalTab, setAuthModalTab] = useState<'signin' | 'signup' | 'forgot'>('signin');
   const [verificationModalNotification, setVerificationModalNotification] = useState<string | null>(null);
 
-  // Sync isPremium and openPremiumModal globally for vanilla scripts (e.g. public/practice.js)
+  useEffect(() => {
+    seedGuaranteedPremiumProfiles();
+  }, []);
+
   useEffect(() => {
     (window as any).mathprepIsPremium = isPremium;
     (window as any).mathprepLimmyCredits = limmyAI_credits;
@@ -80,9 +142,8 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     setPremiumModalOpen(true);
   };
 
-  // Deduct 1 Limmy AI credit for free users; bypass completely for Premium users
   const deductLimmyCredit = async (): Promise<boolean> => {
-    if (isPremium) return true; // Unlimited access for Premium users
+    if (isPremium) return true;
 
     if (limmyAI_credits <= 0) {
       openPremiumModal(
@@ -96,14 +157,27 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     setLimmyCredits(nextCredits);
 
     if (currentUser) {
-      try {
-        const userDocRef = doc(db, 'users', currentUser.uid);
-        await updateDoc(userDocRef, {
-          limmyAI_credits: nextCredits,
-          updatedAt: new Date().toISOString(),
-        });
-      } catch (e) {
-        console.warn('Could not persist decremented Limmy credits to Firestore:', e);
+      const cached = getLocalUserProfile(currentUser.uid, currentUser.email) || {};
+      saveLocalUserProfile(currentUser.uid, currentUser.email, {
+        ...cached,
+        uid: currentUser.uid,
+        email: currentUser.email || '',
+        limmyAI_credits: nextCredits,
+        updatedAt: new Date().toISOString(),
+      });
+
+      if (!isWriteQuotaExhausted() && !isReadQuotaExhausted()) {
+        try {
+          const userDocRef = doc(db, 'users', currentUser.uid);
+          await updateDoc(userDocRef, {
+            limmyAI_credits: nextCredits,
+            updatedAt: new Date().toISOString(),
+          });
+        } catch (e) {
+          if (isQuotaError(e)) {
+            markWriteQuotaExhausted();
+          }
+        }
       }
     }
     return true;
@@ -114,7 +188,6 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     (window as any).deductLimmyCredit = deductLimmyCredit;
   }, [deductLimmyCredit, openPremiumModal]);
 
-  // 60-second cooldown timer for resending verification email
   useEffect(() => {
     if (cooldownSeconds <= 0) return;
     const interval = setInterval(() => {
@@ -123,7 +196,6 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     return () => clearInterval(interval);
   }, [cooldownSeconds]);
 
-  // Auth State Listener & Real-Time Profile/Premium Listener
   useEffect(() => {
     let unsubscribeProfile: (() => void) | null = null;
 
@@ -132,56 +204,107 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       setLoading(false);
 
       if (user) {
-        // If Google OAuth: mark emailVerified as automatically true
         const isGoogle = user.providerData.some((p) => p.providerId === 'google.com');
         setIsGoogleUser(isGoogle);
+        setEmailVerified(isGoogle ? true : user.emailVerified);
 
-        if (isGoogle) {
-          setEmailVerified(true);
-        } else {
-          setEmailVerified(user.emailVerified);
-        }
+        const isGuaranteedPremium = isAlwaysPremiumEmail(user.email);
+        const localProfile = getLocalUserProfile(user.uid, user.email);
 
-        // Real-time Firestore listener for isPremium and limmyAI_credits
-        const isAdmin = user.email?.toLowerCase() === 'searsokvarkhim1@gmail.com';
-        if (isAdmin) {
+        if (isGuaranteedPremium) {
           setIsPremium(true);
           setLimmyCredits(9999);
+          saveLocalUserProfile(user.uid, user.email, {
+            uid: user.uid,
+            email: user.email || '',
+            displayName: user.displayName || user.email?.split('@')[0] || 'Premium Student',
+            isPremium: true,
+            limmyAI_credits: 9999,
+            updatedAt: new Date().toISOString(),
+          });
+        } else if (localProfile) {
+          setIsPremium(Boolean(localProfile.isPremium));
+          setLimmyCredits(typeof localProfile.limmyAI_credits === 'number' ? localProfile.limmyAI_credits : 5);
+        } else {
+          saveLocalUserProfile(user.uid, user.email, {
+            uid: user.uid,
+            email: user.email || '',
+            displayName: user.displayName || user.email?.split('@')[0] || 'Student',
+            isPremium: false,
+            limmyAI_credits: 5,
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+          });
         }
 
-        const userDocRef = doc(db, 'users', user.uid);
-        if (unsubscribeProfile) unsubscribeProfile();
+        if (unsubscribeProfile) {
+          unsubscribeProfile();
+          unsubscribeProfile = null;
+        }
 
-        unsubscribeProfile = onSnapshot(
-          userDocRef,
-          (docSnap) => {
-            if (docSnap.exists()) {
-              const data = docSnap.data();
-              setIsPremium(isAdmin || Boolean(data?.isPremium));
-              setLimmyCredits(isAdmin ? 9999 : (typeof data?.limmyAI_credits === 'number' ? data.limmyAI_credits : 5));
-            } else {
-              // Initialize default free profile in Firestore (or Premium if admin)
-              setDoc(userDocRef, {
-                uid: user.uid,
-                email: user.email || '',
-                displayName: user.displayName || user.email?.split('@')[0] || 'Student',
-                targetScore: 5,
-                isPremium: isAdmin ? true : false,
-                limmyAI_credits: isAdmin ? 9999 : 5,
-                createdAt: new Date().toISOString(),
-                updatedAt: new Date().toISOString(),
-              }).catch((e) => console.warn('Could not write profile to Firestore:', e));
+        if (!isReadQuotaExhausted()) {
+          const userDocRef = doc(db, 'users', user.uid);
+          unsubscribeProfile = onSnapshot(
+            userDocRef,
+            (docSnap) => {
+              if (docSnap.exists()) {
+                const data = docSnap.data();
+                const resolvedPremium = isGuaranteedPremium || Boolean(data?.isPremium);
+                const resolvedCredits = isGuaranteedPremium
+                  ? 9999
+                  : typeof data?.limmyAI_credits === 'number'
+                  ? data.limmyAI_credits
+                  : 5;
+                setIsPremium(resolvedPremium);
+                setLimmyCredits(resolvedCredits);
+                saveLocalUserProfile(user.uid, user.email, {
+                  ...data,
+                  uid: user.uid,
+                  email: user.email || data?.email || '',
+                  isPremium: resolvedPremium,
+                  limmyAI_credits: resolvedCredits,
+                });
+                if (isGuaranteedPremium && !data?.isPremium && !isWriteQuotaExhausted()) {
+                  updateDoc(userDocRef, {
+                    isPremium: true,
+                    limmyAI_credits: 9999,
+                    updatedAt: new Date().toISOString(),
+                  }).catch((e) => {
+                    if (isQuotaError(e)) markWriteQuotaExhausted();
+                  });
+                }
+              } else if (!docSnap.metadata.fromCache && !isWriteQuotaExhausted()) {
+                const defaultProfile = {
+                  uid: user.uid,
+                  email: user.email || '',
+                  displayName: user.displayName || user.email?.split('@')[0] || 'Student',
+                  targetScore: 5,
+                  isPremium: isGuaranteedPremium ? true : Boolean(localProfile?.isPremium),
+                  limmyAI_credits: isGuaranteedPremium ? 9999 : (localProfile?.limmyAI_credits ?? 5),
+                  createdAt: new Date().toISOString(),
+                  updatedAt: new Date().toISOString(),
+                };
+                saveLocalUserProfile(user.uid, user.email, defaultProfile);
+                setDoc(userDocRef, defaultProfile).catch((e) => {
+                  if (isQuotaError(e)) {
+                    markWriteQuotaExhausted();
+                  }
+                });
+              }
+            },
+            (err) => {
+              if (isQuotaError(err)) {
+                markReadQuotaExhausted();
+              }
+              if (isGuaranteedPremium) {
+                setIsPremium(true);
+                setLimmyCredits(9999);
+              } else if (localProfile) {
+                setIsPremium(Boolean(localProfile.isPremium));
+              }
             }
-          },
-          (err) => {
-            console.warn('Realtime profile listener error:', err);
-            // On quota error or read failure, preserve admin premium state
-            if (isAdmin) {
-              setIsPremium(true);
-              setLimmyCredits(9999);
-            }
-          }
-        );
+          );
+        }
       } else {
         if (unsubscribeProfile) {
           unsubscribeProfile();
@@ -201,22 +324,18 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     };
   }, []);
 
-  // Sign up with Email/Password
   const signUpWithEmail = async (email: string, pass: string) => {
     try {
       const cred = await createUserWithEmailAndPassword(auth, email, pass);
       const user = cred.user;
 
-      // 1. Immediately send verification email
       await sendEmailVerification(user);
       setCooldownSeconds(60);
 
-      // 2. Set modal notification
       setVerificationModalNotification(
         `Verification link sent to ${email}! Please check your inbox/spam folder before signing in.`
       );
 
-      // Keep emailVerified false until they verify
       setEmailVerified(false);
       return {
         success: true,
@@ -224,7 +343,6 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         requiresVerification: true,
       };
     } catch (err: any) {
-      console.warn('Sign up status:', err?.code, err?.message);
       let errMsg = 'Failed to create account.';
       if (err.code === 'auth/operation-not-allowed') {
         errMsg = 'Email/Password sign-up is not enabled in your Firebase Console. Sign in with Google (instant 1-click access) or enable "Email/Password" in Firebase Console > Authentication > Sign-in method.';
@@ -241,7 +359,6 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     }
   };
 
-  // Sign in with Email/Password
   const signInWithEmail = async (email: string, pass: string) => {
     try {
       const cred = await signInWithEmailAndPassword(auth, email, pass);
@@ -256,7 +373,6 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
       return { success: true, message: 'Signed in successfully!' };
     } catch (err: any) {
-      console.warn('Sign in status:', err?.code, err?.message);
       let errMsg = 'Invalid email or password.';
       if (err.code === 'auth/operation-not-allowed') {
         errMsg = 'Email/Password sign-in is not enabled in your Firebase Console. Sign in with Google (instant 1-click access) or enable "Email/Password" in Firebase Console > Authentication > Sign-in method.';
@@ -273,7 +389,6 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     }
   };
 
-  // Sign in with Google OAuth
   const signInWithGoogle = async () => {
     try {
       await signInWithPopup(auth, googleProvider);
@@ -281,12 +396,10 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       setIsGoogleUser(true);
       return { success: true, message: 'Signed in with Google!' };
     } catch (err: any) {
-      console.warn('Google sign-in status:', err?.code, err?.message);
       return { success: false, message: 'Google sign-in was cancelled or failed.' };
     }
   };
 
-  // Resend verification email with 60-second cooldown
   const resendVerification = async () => {
     if (!currentUser || cooldownSeconds > 0) return false;
     try {
@@ -295,7 +408,6 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       showToast('Verification email sent successfully!');
       return true;
     } catch (err: any) {
-      console.warn('Resend verification status:', err?.code, err?.message);
       if (err.code === 'auth/too-many-requests') {
         showToast('Too many requests. Please wait a minute and try again.', 'error');
       }
@@ -303,7 +415,6 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     }
   };
 
-  // Reload user status to check if emailVerified changed to true
   const checkVerificationStatus = async () => {
     if (!currentUser) return false;
     try {
@@ -317,20 +428,17 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         showToast('Email is not verified yet. Please check your inbox or spam folder.', 'warning');
         return false;
       }
-    } catch (err) {
-      console.warn('Reload user status status:', err);
+    } catch {
       return false;
     }
   };
 
-  // Forgot password flow
   const resetPassword = async (email: string) => {
     try {
       await sendPasswordResetEmail(auth, email);
       showToast('Password reset link sent! Check your inbox.');
       return true;
     } catch (err: any) {
-      console.warn('Password reset status:', err?.code, err?.message);
       let errMsg = 'Failed to send password reset email.';
       if (err.code === 'auth/operation-not-allowed') {
         errMsg = 'Email password reset is disabled in Firebase Console. Please sign in with Google or enable Email/Password provider.';
@@ -344,14 +452,12 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     }
   };
 
-  // Sign out
   const logout = async () => {
     await signOut(auth);
     setEmailVerified(false);
     setIsGoogleUser(false);
   };
 
-  // Protected action guard (blocks starting official practice exams or saving stats to Firestore)
   const guardProtectedAction = (actionName: string, callback: () => void): boolean => {
     if (!currentUser) {
       setAuthModalTab('signin');
@@ -415,7 +521,6 @@ export const useAuth = () => {
   return context;
 };
 
-// Global lightweight Toast helper
 export function showToast(message: string, type: 'success' | 'warning' | 'error' = 'success') {
   let container = document.getElementById('mathprep-toast-container');
   if (!container) {

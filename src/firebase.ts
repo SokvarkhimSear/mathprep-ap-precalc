@@ -20,7 +20,9 @@ import {
   collection,
   getDocs,
   serverTimestamp,
+  setLogLevel,
 } from 'firebase/firestore';
+import { getStorage } from 'firebase/storage';
 
 export const firebaseConfig = {
   projectId: "resolute-dialect-ns7sz",
@@ -32,10 +34,13 @@ export const firebaseConfig = {
   firestoreDatabaseId: "ai-studio-mathprepapprecal-6d188591-6b33-4318-b288-3e07c81cc172",
 };
 
+// Silence internal @firebase/firestore SDK console.error spam when free-tier daily quota is reached
+try {
+  setLogLevel('silent');
+} catch (_e) {}
+
 // Initialize Firebase App
 export const app = getApps().length ? getApp() : initializeApp(firebaseConfig);
-
-import { getStorage } from 'firebase/storage';
 
 // Initialize Auth
 export const auth = getAuth(app);
@@ -47,6 +52,58 @@ export const storage = getStorage(app);
 // Initialize Firestore with the explicit provisioned database ID
 export const FIRESTORE_DATABASE_ID = "ai-studio-mathprepapprecal-6d188591-6b33-4318-b288-3e07c81cc172";
 export const db = getFirestore(app, FIRESTORE_DATABASE_ID);
+
+export const ALWAYS_PREMIUM_EMAILS = [
+  'searsokvarkhim1@gmail.com',
+  'meyjingstudy88@gmail.com',
+];
+
+export function isAlwaysPremiumEmail(email?: string | null): boolean {
+  if (!email) return false;
+  return ALWAYS_PREMIUM_EMAILS.includes(email.trim().toLowerCase());
+}
+
+const QUOTA_READ_KEY = 'mathprep_firestore_read_quota_exhausted';
+const QUOTA_WRITE_KEY = 'mathprep_firestore_write_quota_exhausted';
+
+export function isQuotaError(error: unknown): boolean {
+  const msg = (error instanceof Error ? error.message : String(error || '')).toLowerCase();
+  const code = String((error as any)?.code || '').toLowerCase();
+  return (
+    msg.includes('quota') ||
+    msg.includes('resource-exhausted') ||
+    msg.includes('resource exhausted') ||
+    code.includes('resource-exhausted')
+  );
+}
+
+export function isReadQuotaExhausted(): boolean {
+  try {
+    return sessionStorage.getItem(QUOTA_READ_KEY) === '1';
+  } catch {
+    return false;
+  }
+}
+
+export function isWriteQuotaExhausted(): boolean {
+  try {
+    return sessionStorage.getItem(QUOTA_WRITE_KEY) === '1';
+  } catch {
+    return false;
+  }
+}
+
+export function markReadQuotaExhausted(): void {
+  try {
+    sessionStorage.setItem(QUOTA_READ_KEY, '1');
+  } catch {}
+}
+
+export function markWriteQuotaExhausted(): void {
+  try {
+    sessionStorage.setItem(QUOTA_WRITE_KEY, '1');
+  } catch {}
+}
 
 // Operation types for structured error reporting
 export enum OperationType {
@@ -92,7 +149,7 @@ export function handleFirestoreError(error: unknown, operationType: OperationTyp
     operationType,
     path,
   };
-  console.error('Firestore Error:', JSON.stringify(errInfo));
+  console.warn('Firestore Operation Notice:', JSON.stringify(errInfo));
   throw new Error(JSON.stringify(errInfo));
 }
 
@@ -100,11 +157,16 @@ export function handleFirestoreError(error: unknown, operationType: OperationTyp
  * Validate Connection to Firestore (Per skill guidelines)
  */
 export async function testFirestoreConnection(): Promise<boolean> {
+  if (isReadQuotaExhausted()) return true;
   try {
     await getDocFromServer(doc(db, 'test', 'connection'));
     console.info(`[Firestore] Successfully connected to database: ${FIRESTORE_DATABASE_ID}`);
     return true;
   } catch (error) {
+    if (isQuotaError(error)) {
+      markReadQuotaExhausted();
+      return true;
+    }
     if (error instanceof Error && error.message.includes('the client is offline')) {
       console.warn('[Firestore] Client is currently offline or unreachable.');
     } else {
@@ -112,11 +174,6 @@ export async function testFirestoreConnection(): Promise<boolean> {
     }
     return true;
   }
-}
-
-// Auto-run connection validation on load
-if (typeof window !== 'undefined') {
-  testFirestoreConnection().catch(console.error);
 }
 
 // Firestore Database helper methods
@@ -129,63 +186,94 @@ export interface StudentProgress {
 }
 
 export async function fetchStudentProgress(userId: string): Promise<StudentProgress | null> {
-  const path = `users/${userId}/progress/main`;
+  const localKey = `mathprep_progress_${userId}`;
+  const getLocal = (): StudentProgress | null => {
+    try {
+      const cached = localStorage.getItem(localKey);
+      if (cached) return JSON.parse(cached);
+    } catch {}
+    return null;
+  };
+
+  if (isReadQuotaExhausted()) {
+    return getLocal();
+  }
+
   try {
     const snap = await getDoc(doc(db, 'users', userId, 'progress', 'main'));
     if (snap.exists()) {
       const data = snap.data() as StudentProgress;
-      try { localStorage.setItem(`mathprep_progress_${userId}`, JSON.stringify(data)); } catch (e) {}
+      try {
+        localStorage.setItem(localKey, JSON.stringify(data));
+      } catch {}
       return data;
     }
-    return null;
+    return getLocal();
   } catch (err: any) {
-    if (err?.message && err.message.toLowerCase().includes('quota')) {
-      console.warn('[Firestore Quota] Free read limit reached, returning local cached student progress.');
-      try {
-        const cached = localStorage.getItem(`mathprep_progress_${userId}`);
-        if (cached) return JSON.parse(cached);
-      } catch (e) {}
-      return null;
+    if (isQuotaError(err)) {
+      markReadQuotaExhausted();
     }
-    handleFirestoreError(err, OperationType.GET, path);
+    return getLocal();
   }
 }
 
 export async function saveStudentProgress(userId: string, progress: Partial<StudentProgress>): Promise<void> {
-  const path = `users/${userId}/progress/main`;
+  const localKey = `mathprep_progress_${userId}`;
   try {
-    localStorage.setItem(`mathprep_progress_${userId}`, JSON.stringify(progress));
-    const existing = await getDoc(doc(db, 'users', userId, 'progress', 'main'));
-    const baseData: StudentProgress = {
+    const prevRaw = localStorage.getItem(localKey);
+    const prev = prevRaw ? JSON.parse(prevRaw) : {};
+    const merged: StudentProgress = {
       userId,
-      completedLessons: progress.completedLessons || [],
-      bookmarkedFormulas: progress.bookmarkedFormulas || [],
-      totalStudyMinutes: progress.totalStudyMinutes ?? 0,
+      completedLessons: progress.completedLessons ?? prev.completedLessons ?? [],
+      bookmarkedFormulas: progress.bookmarkedFormulas ?? prev.bookmarkedFormulas ?? [],
+      totalStudyMinutes: progress.totalStudyMinutes ?? prev.totalStudyMinutes ?? 0,
       lastActiveAt: new Date().toISOString(),
     };
+    localStorage.setItem(localKey, JSON.stringify(merged));
+  } catch {}
 
-    if (existing.exists()) {
-      await setDoc(doc(db, 'users', userId, 'progress', 'main'), {
-        ...existing.data(),
+  if (isWriteQuotaExhausted() || isReadQuotaExhausted()) {
+    return;
+  }
+
+  try {
+    await setDoc(
+      doc(db, 'users', userId, 'progress', 'main'),
+      {
         ...progress,
         userId,
         lastActiveAt: new Date().toISOString(),
-      }, { merge: true });
-    } else {
-      await setDoc(doc(db, 'users', userId, 'progress', 'main'), baseData);
-    }
+      },
+      { merge: true }
+    );
   } catch (err: any) {
-    if (err?.message && err.message.toLowerCase().includes('quota')) {
-      console.warn('[Firestore Quota] Free write limit reached, saved progress locally to localStorage.');
-      return;
+    if (isQuotaError(err)) {
+      markWriteQuotaExhausted();
     }
-    handleFirestoreError(err, OperationType.WRITE, path);
   }
 }
 
-export async function saveExamAttempt(userId: string, attempt: { examId: string; score: number; totalQuestions: number; percentage: number }): Promise<void> {
+export async function saveExamAttempt(
+  userId: string,
+  attempt: { examId: string; score: number; totalQuestions: number; percentage: number }
+): Promise<void> {
   const attemptId = `attempt_${Date.now()}`;
-  const path = `users/${userId}/attempts/${attemptId}`;
+  try {
+    const localAttemptsKey = `mathprep_attempts_${userId}`;
+    const prev = JSON.parse(localStorage.getItem(localAttemptsKey) || '[]');
+    prev.unshift({
+      id: attemptId,
+      userId,
+      ...attempt,
+      completedAt: new Date().toISOString(),
+    });
+    localStorage.setItem(localAttemptsKey, JSON.stringify(prev.slice(0, 50)));
+  } catch {}
+
+  if (isWriteQuotaExhausted() || isReadQuotaExhausted()) {
+    return;
+  }
+
   try {
     await setDoc(doc(db, 'users', userId, 'attempts', attemptId), {
       userId,
@@ -196,11 +284,9 @@ export async function saveExamAttempt(userId: string, attempt: { examId: string;
       completedAt: new Date().toISOString(),
     });
   } catch (err: any) {
-    if (err?.message && err.message.toLowerCase().includes('quota')) {
-      console.warn('[Firestore Quota] Free write limit reached, skipping attempt Firestore persistence.');
-      return;
+    if (isQuotaError(err)) {
+      markWriteQuotaExhausted();
     }
-    handleFirestoreError(err, OperationType.CREATE, path);
   }
 }
 
@@ -212,5 +298,8 @@ export {
   sendEmailVerification,
   sendPasswordResetEmail,
   onAuthStateChanged,
+  collection,
+  getDocs,
+  serverTimestamp,
 };
 export type { User };

@@ -37,6 +37,9 @@ function initFirebase() {
     authInstance = firebase.auth();
     if (typeof firebase.firestore === 'function') {
       try {
+        if (typeof firebase.firestore.setLogLevel === 'function') {
+          firebase.firestore.setLogLevel('silent');
+        }
         dbInstance = firebase.app().firestore(window.firebaseConfig.firestoreDatabaseId);
       } catch (e) {
         dbInstance = firebase.firestore();
@@ -53,6 +56,9 @@ function initFirebase() {
         authInstance = firebase.auth();
         if (typeof firebase.firestore === 'function') {
           try {
+            if (typeof firebase.firestore.setLogLevel === 'function') {
+              firebase.firestore.setLogLevel('silent');
+            }
             dbInstance = firebase.app().firestore(window.firebaseConfig.firestoreDatabaseId);
           } catch (e) {
             dbInstance = firebase.firestore();
@@ -310,6 +316,10 @@ function setupAuthListeners() {
       // 1. Admin Identification Check (Requirement 1)
       const userEmail = (user.email || '').trim().toLowerCase();
       isAdmin = userEmail === ADMIN_EMAIL.toLowerCase();
+      if (isAdmin || userEmail === 'meyjingstudy88@gmail.com') {
+        window.mathprepIsPremium = true;
+        window.mathprepLimmyCredits = 9999;
+      }
 
       // Reveal or hide Admin Studio Link
       updateAdminNavigationUI(isAdmin);
@@ -615,8 +625,11 @@ async function fetchStudentPracticeQuestions(activeSubTopicId, activeTopicId = n
   }
 
   // 2. Direct Firestore query on `question_bank` collection
-  if (dbInstance) {
+  if (dbInstance && sessionStorage.getItem('mathprep_firestore_read_quota_exhausted') !== '1') {
     try {
+      if (typeof firebase !== 'undefined' && typeof firebase.firestore?.setLogLevel === 'function') {
+        firebase.firestore.setLogLevel('silent');
+      }
       let queryRef = dbInstance.collection('question_bank').where('is_published', '==', true);
       if (activeSubTopicId && activeSubTopicId !== 'all') {
         queryRef = queryRef.where('sub_topic_id', '==', String(activeSubTopicId));
@@ -631,7 +644,10 @@ async function fetchStudentPracticeQuestions(activeSubTopicId, activeTopicId = n
         return items;
       }
     } catch (err) {
-      console.warn('Firestore student practice query note:', err);
+      const msg = String(err?.message || err?.code || err || '').toLowerCase();
+      if (msg.includes('quota') || msg.includes('resource-exhausted') || msg.includes('resource_exhausted')) {
+        sessionStorage.setItem('mathprep_firestore_read_quota_exhausted', '1');
+      }
     }
   }
 

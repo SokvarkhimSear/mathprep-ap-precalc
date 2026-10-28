@@ -4,7 +4,7 @@ import { PageId } from '../types';
 import { UNITS } from '../data/curriculumData';
 
 interface HomePageProps {
-  onNavigate: (page: PageId, unitFilter?: number | null) => void;
+  onNavigate: (page: PageId, unitFilter?: string | number | null) => void;
   onOpenLimmy?: (context?: string) => void;
 }
 
@@ -20,11 +20,11 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, onOpenLimmy }) =
               <span aria-hidden="true">·</span>
               <span>College Board AP Precalculus</span>
               <span aria-hidden="true">·</span>
-              <span>All 4 Units</span>
+              <span>Units 1, 2A, 2B, 3, 4A, 4B</span>
             </div>
 
             <h1 className="text-3xl sm:text-4xl lg:text-5xl font-bold tracking-tight text-slate-900 leading-tight">
-              Master All 4 AP Precalculus Units with Mathematical Precision
+              Master All AP Precalculus Units with Mathematical Precision
             </h1>
 
             <p className="mt-4 text-base sm:text-lg text-slate-600 leading-relaxed">
@@ -94,9 +94,9 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, onOpenLimmy }) =
                 <BookOpen className="w-6 h-6" />
               </div>
               <div className="text-xs text-slate-500 font-medium mb-1.5">
-                <span>All 44 Official Topics</span>
+                <span>All 71 Official Topics & Reviews</span>
                 <span aria-hidden="true" className="mx-1.5">·</span>
-                <span>All 4 Units</span>
+                <span>Units 1, 2A, 2B, 3, 4A, 4B</span>
                 <span aria-hidden="true" className="mx-1.5">·</span>
                 <span>Lessons, MCQs & FRQs</span>
               </div>
@@ -104,31 +104,31 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, onOpenLimmy }) =
                 Curriculum Lessons Hub
               </h3>
               <p className="text-sm text-slate-600 leading-relaxed">
-                Comprehensive topic modules across all four College Board units (Topics 1.1–1.16, 2.1–2.7, 3.1–3.11, and 4.1–4.10). Explore Master Lessons, Dedicated Formula Sheets, AP Multiple-Choice Questions, and Multi-Part FRQs with scoring rubrics.
+                Comprehensive topic modules across Unit 1, Unit 2A, Unit 2B, Unit 3, Unit 4A, and Unit 4B—including A/B/C topic splits and Unit Reviews. Explore Master Lessons, Dedicated Formula Sheets, AP Multiple-Choice Questions, and Multi-Part FRQs with scoring rubrics.
               </p>
 
               <div className="mt-5 space-y-2 pt-4 border-t border-slate-100 text-xs text-slate-700">
                 <div className="flex items-center gap-2">
                   <span className="text-blue-600 font-bold">✓</span>
-                  <span>Unit 1 (16 Topics): Polynomials, Rational Functions, Compositions & Inverses</span>
+                  <span>Unit 1 (15 Modules): Polynomials, Rational Functions, Transformations & Review</span>
                 </div>
                 <div className="flex items-center gap-2">
                   <span className="text-blue-600 font-bold">✓</span>
-                  <span>Unit 2 (7 Topics): Sequences, Exponential/Log Modeling & Semi-Log Plots</span>
+                  <span>Units 2A & 2B (20 Modules): Sequences, Exponentials, Compositions, Inverses & Logarithms</span>
                 </div>
                 <div className="flex items-center gap-2">
                   <span className="text-blue-600 font-bold">✓</span>
-                  <span>Unit 3 (11 Topics): Unit Circle, Sinusoidal Waves, Inverse Trig & Polar Curves</span>
+                  <span>Unit 3 (16 Modules): Unit Circle, Sinusoidal Waves, Inverse Trig, Polar Graphs & Review</span>
                 </div>
                 <div className="flex items-center gap-2">
                   <span className="text-blue-600 font-bold">✓</span>
-                  <span>Unit 4 (10 Topics): Parametric Motion, Conics, Vectors & Matrix Transformations</span>
+                  <span>Units 4A & 4B (20 Modules): Parametrics, Conics (Parabolas/Ellipses/Hyperbolas), Vectors & Matrices</span>
                 </div>
               </div>
             </div>
 
             <div className="mt-8 pt-4 border-t border-slate-100 flex items-center justify-between text-sm font-semibold text-blue-600">
-              <span>Enter All 44 Lessons</span>
+              <span>Enter All 71 Lessons</span>
               <ChevronRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
             </div>
           </div>
@@ -143,9 +143,9 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, onOpenLimmy }) =
                 <Calculator className="w-6 h-6" />
               </div>
               <div className="text-xs text-slate-500 font-medium mb-1.5">
-                <span>103+ LaTeX Formulas</span>
+                <span>160+ LaTeX Formulas</span>
                 <span aria-hidden="true" className="mx-1.5">·</span>
-                <span>All 44 Sub-Units</span>
+                <span>All 71 Curriculum Modules</span>
                 <span aria-hidden="true" className="mx-1.5">·</span>
                 <span>One-Click Copy</span>
               </div>
@@ -184,21 +184,21 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, onOpenLimmy }) =
         </div>
       </section>
 
-      {/* Complete 4 Units Roadmap */}
+      {/* Complete 6 Unit Sections Roadmap */}
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="mb-8">
           <div className="text-xs font-bold text-blue-600 uppercase tracking-wider mb-1">
             Curriculum Structure
           </div>
           <h2 className="text-2xl sm:text-3xl font-bold text-slate-900 tracking-tight">
-            All 4 AP Precalculus Units
+            AP Precalculus Units (1, 2A, 2B, 3, 4A, 4B)
           </h2>
           <p className="text-sm text-slate-600 mt-1">
-            Jump directly into any unit's lessons or formulas.
+            Jump directly into any unit section's lessons or formulas.
           </p>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {UNITS.map((unit) => (
             <div
               key={unit.id}
@@ -206,13 +206,13 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, onOpenLimmy }) =
             >
               <div>
                 <div className="flex items-center justify-between text-xs text-slate-500 font-medium mb-2.5">
-                  <span className="font-semibold text-blue-600">Unit {unit.number}</span>
+                  <span className="font-semibold text-blue-600">{unit.shortTitle || `Unit ${unit.unitKey || unit.number}`}</span>
                   <span aria-hidden="true">·</span>
                   <span className="tabular-nums">{unit.examWeight}</span>
                 </div>
 
-                <h3 className="text-xl font-bold text-slate-900 mb-2">
-                  {unit.title}
+                <h3 className="text-lg font-bold text-slate-900 mb-2">
+                  {unit.fullTitle || unit.title}
                 </h3>
 
                 <p className="text-sm text-slate-600 leading-relaxed mb-4">
@@ -221,7 +221,7 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, onOpenLimmy }) =
 
                 <div className="space-y-1.5 pt-3 border-t border-slate-100 text-xs text-slate-600 mb-5">
                   <div className="text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1">
-                    Key Topics Covered:
+                    Key Topics Covered ({unit.topicsCount} Topics):
                   </div>
                   {unit.keyTopics.map((topic, i) => (
                     <div key={i} className="flex items-start gap-1.5">
@@ -234,16 +234,16 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, onOpenLimmy }) =
 
               <div className="pt-4 border-t border-slate-100 flex flex-wrap items-center gap-3">
                 <button
-                  onClick={() => onNavigate('lessons', unit.number)}
+                  onClick={() => onNavigate('lessons', unit.unitId || unit.number)}
                   className="px-4 py-2 text-xs font-semibold text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors cursor-pointer"
                 >
-                  Unit {unit.number} Lessons
+                  {unit.shortTitle || `Unit ${unit.number}`} Lessons
                 </button>
                 <button
-                  onClick={() => onNavigate('formulas', unit.number)}
+                  onClick={() => onNavigate('formulas', unit.unitId || unit.number)}
                   className="px-4 py-2 text-xs font-semibold text-slate-700 bg-slate-100 rounded-lg hover:bg-slate-200 transition-colors cursor-pointer"
                 >
-                  Unit {unit.number} Formulas
+                  {unit.shortTitle || `Unit ${unit.number}`} Formulas
                 </button>
               </div>
             </div>

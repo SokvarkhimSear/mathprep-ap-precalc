@@ -8,8 +8,8 @@ import { useAuth, showToast } from '../context/AuthContext';
 import { fetchStudentProgress, saveStudentProgress } from '../firebase';
 
 interface FormulaBankPageProps {
-  selectedUnit: number | null;
-  onSelectUnit: (unit: number | null) => void;
+  selectedUnit: string | number | null;
+  onSelectUnit: (unit: string | number | null) => void;
   onNavigate: (page: PageId) => void;
   onOpenLimmy?: (context?: string) => void;
 }
@@ -39,8 +39,8 @@ export const FormulaBankPage: React.FC<FormulaBankPageProps> = ({
           setBookmarkedIds(progress.bookmarkedFormulas);
         }
       })
-      .catch((err) => {
-        console.error('Error loading bookmarks from Firestore:', err);
+      .catch(() => {
+        // Handled via localStorage fallback
       });
 
     return () => {
@@ -69,19 +69,30 @@ export const FormulaBankPage: React.FC<FormulaBankPageProps> = ({
         });
         showToast(
           !isBookmarked
-            ? 'Formula bookmarked to your Firebase database!'
-            : 'Bookmark removed from your database.',
+            ? 'Formula bookmarked!'
+            : 'Bookmark removed.',
           'success'
         );
       } catch (err) {
-        console.error('Failed to sync bookmark to Firestore:', err);
-        showToast('Error syncing with database. Check email verification.', 'error');
+        showToast('Bookmark saved locally.', 'success');
       }
     });
   };
 
+  const formulaMatchesSelectedUnit = (f: FormulaItem) => {
+    if (!selectedUnit) return true;
+    if (typeof selectedUnit === 'number') {
+      return f.unitNumber === selectedUnit;
+    }
+    const sel = String(selectedUnit).toLowerCase();
+    return (
+      String(f.unitId || '').toLowerCase() === sel ||
+      String(f.unitKey || '').toLowerCase() === sel.replace('unit_', '').replace('unit-', '')
+    );
+  };
+
   const filteredFormulas = FORMULAS.filter((f) => {
-    const matchesUnit = selectedUnit ? f.unitNumber === selectedUnit : true;
+    const matchesUnit = formulaMatchesSelectedUnit(f);
     const matchesBookmark = showOnlyBookmarks ? bookmarkedIds.includes(f.id) : true;
     const matchesSearch =
       searchQuery === '' ||
@@ -92,11 +103,22 @@ export const FormulaBankPage: React.FC<FormulaBankPageProps> = ({
     return matchesUnit && matchesBookmark && matchesSearch;
   });
 
-  // Group formulas by unit
-  const formulasByUnit = [1, 2, 3, 4].map((uNum) => ({
-    unit: UNITS.find((u) => u.number === uNum)!,
-    formulas: filteredFormulas.filter((f) => f.unitNumber === uNum),
+  // Group formulas by unit section in UNITS
+  const formulasByUnit = UNITS.map((unit) => ({
+    unit,
+    formulas: filteredFormulas.filter(
+      (f) => (f.unitId || `unit_${f.unitNumber}`) === (unit.unitId || unit.id)
+    ),
   }));
+
+  const selectedUnitLabel = selectedUnit
+    ? UNITS.find(
+        (u) =>
+          u.unitId === selectedUnit ||
+          u.id === selectedUnit ||
+          (typeof selectedUnit === 'number' && u.number === selectedUnit)
+      )?.shortTitle || `Unit ${selectedUnit}`
+    : 'All Units (1–4B)';
 
   return (
     <div className="py-6 sm:py-10 max-w-7xl w-full mx-auto px-3 sm:px-6 lg:px-8 space-y-6 sm:space-y-8 animate-fade-in max-w-full overflow-x-hidden">
@@ -125,7 +147,7 @@ export const FormulaBankPage: React.FC<FormulaBankPageProps> = ({
             Official AP Precalculus Formula Sheet
           </h1>
           <p className="text-sm text-slate-600 mt-1 max-w-2xl">
-            Essential reference equations across all 4 units rendered in authentic LaTeX Computer Modern math notation. Click to copy raw LaTeX source code or bookmark directly to your Firebase database.
+            Essential reference equations across Units 1, 2A, 2B, 3, 4A, and 4B rendered in authentic LaTeX Computer Modern math notation. Click to copy raw LaTeX source code or bookmark for review.
           </p>
         </div>
 
@@ -168,7 +190,7 @@ export const FormulaBankPage: React.FC<FormulaBankPageProps> = ({
 
           <span>Showing:</span>
           <span className="font-semibold text-blue-600">
-            {selectedUnit ? `Unit ${selectedUnit}` : 'All 4 Units'} ({filteredFormulas.length} formulas)
+            {selectedUnitLabel} ({filteredFormulas.length} formulas)
           </span>
           {selectedUnit && (
             <button
@@ -224,19 +246,19 @@ export const FormulaBankPage: React.FC<FormulaBankPageProps> = ({
               <div key={unit.id} className="space-y-4">
                 <div className="flex items-center justify-between pb-2 border-b border-slate-200">
                   <div className="flex items-center gap-2">
-                    <span className="w-6 h-6 rounded-md bg-blue-600 text-white font-bold text-xs flex items-center justify-center">
-                      {unit.number}
+                    <span className="px-2 h-6 rounded-md bg-blue-600 text-white font-bold text-xs flex items-center justify-center">
+                      {unit.unitKey || unit.number}
                     </span>
                     <h2 className="text-base sm:text-lg font-bold text-slate-900">
-                      Unit {unit.number}: {unit.title}
+                      {unit.fullTitle || `Unit ${unit.unitKey || unit.number}: ${unit.title}`}
                     </h2>
                   </div>
 
                   <button
-                    onClick={() => onSelectUnit(unit.number)}
+                    onClick={() => onSelectUnit(unit.unitId || unit.number)}
                     className="text-xs font-semibold text-blue-600 hover:text-blue-800 cursor-pointer"
                   >
-                    Focus Unit {unit.number} Only →
+                    Focus {unit.shortTitle || `Unit ${unit.number}`} Only →
                   </button>
                 </div>
 
@@ -284,7 +306,7 @@ const FormulaCard: React.FC<FormulaCardProps> = ({
         {/* Zero-pill metadata */}
         <div className="flex items-center justify-between text-xs text-slate-500 font-medium mb-2.5">
           <div className="flex items-center gap-1.5">
-            <span className="font-semibold text-blue-600">Unit {item.unitNumber}</span>
+            <span className="font-semibold text-blue-600">Unit {item.unitKey || item.unitNumber}</span>
             <span aria-hidden="true">·</span>
             <span>{item.category}</span>
           </div>

@@ -1,11 +1,15 @@
-export type UnitId = 'unit-1' | 'unit-2' | 'unit-3' | 'unit-4';
+export type UnitId = 'unit-1' | 'unit-2a' | 'unit-2b' | 'unit-3' | 'unit-4a' | 'unit-4b' | 'unit-2' | 'unit-4';
 export type PageId = 'home' | 'lessons' | 'practice' | 'progress' | 'formulas' | 'checkout' | 'admin';
 
 
 export interface UnitInfo {
-  id: UnitId;
+  id: UnitId | string;
+  unitId?: string;
+  unitKey?: string;
   number: number;
+  shortTitle?: string;
   title: string;
+  fullTitle?: string;
   subtitle: string;
   examWeight: string;
   description: string;
@@ -170,6 +174,8 @@ export interface ExhaustiveLesson {
 export interface Lesson {
   id: string;
   unitNumber: number;
+  unitId?: string;
+  unitKey?: string;
   topicCode: string;
   title: string;
   duration: string;
@@ -206,6 +212,8 @@ export interface Lesson {
 export interface FormulaItem {
   id: string;
   unitNumber: number;
+  unitId?: string;
+  unitKey?: string;
   topicCode?: string;
   subTopicId?: string;
   category: string;

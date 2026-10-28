@@ -1,6 +1,15 @@
 import React, { useState, useEffect } from 'react';
-import { useAuth } from '../context/AuthContext';
-import { db } from '../firebase';
+import { useAuth, showToast } from '../context/AuthContext';
+import {
+  db,
+  isQuotaError,
+  isReadQuotaExhausted,
+  isWriteQuotaExhausted,
+  markReadQuotaExhausted,
+  markWriteQuotaExhausted,
+  ALWAYS_PREMIUM_EMAILS,
+  isAlwaysPremiumEmail,
+} from '../firebase';
 import {
   collection,
   getDocs,
@@ -10,7 +19,6 @@ import {
   query,
   where,
   setDoc,
-  getDoc,
 } from 'firebase/firestore';
 
 export interface PaymentSubmission {
@@ -37,45 +45,113 @@ export interface FirestoreUserRecord {
   updatedAt?: string;
 }
 
+function getLocalUsersDirectory(): Record<string, FirestoreUserRecord> {
+  try {
+    const raw = localStorage.getItem('mathprep_local_users_directory');
+    return raw ? JSON.parse(raw) : {};
+  } catch {
+    return {};
+  }
+}
+
+function saveLocalUsersDirectory(dir: Record<string, FirestoreUserRecord>) {
+  try {
+    localStorage.setItem('mathprep_local_users_directory', JSON.stringify(dir));
+  } catch {}
+}
+
+function getLocalSubmissions(): PaymentSubmission[] {
+  try {
+    const raw = localStorage.getItem('mathprep_local_payment_submissions');
+    return raw ? JSON.parse(raw) : [];
+  } catch {
+    return [];
+  }
+}
+
+function saveLocalSubmissions(subs: PaymentSubmission[]) {
+  try {
+    localStorage.setItem('mathprep_local_payment_submissions', JSON.stringify(subs));
+  } catch {}
+}
+
 export function AdminPaymentApprovals() {
   const { currentUser, userEmail } = useAuth();
-  
-  // State
+
   const [activeTab, setActiveTab] = useState<'submissions' | 'users' | 'quick_grant'>('submissions');
   const [submissions, setSubmissions] = useState<PaymentSubmission[]>([]);
   const [usersList, setUsersList] = useState<FirestoreUserRecord[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
-  
-  // Submission Filter State
+
   const [submissionFilter, setSubmissionFilter] = useState<'pending' | 'approved' | 'rejected' | 'all'>('pending');
   const [selectedScreenshot, setSelectedScreenshot] = useState<string | null>(null);
   const [processingId, setProcessingId] = useState<string | null>(null);
 
-  // User Search State
   const [userSearchQuery, setUserSearchQuery] = useState<string>('');
 
-  // Quick Grant Form State
   const [grantEmailInput, setGrantEmailInput] = useState<string>('');
   const [grantDaysInput, setGrantDaysInput] = useState<number>(30);
   const [grantingStatus, setGrantingStatus] = useState<boolean>(false);
 
-  // Quota Error State
   const [quotaErrorNotice, setQuotaErrorNotice] = useState<boolean>(false);
 
-  // Strict Admin Check
-  const isAdmin = userEmail?.toLowerCase() === 'searsokvarkhim1@gmail.com' ||
+  const isAdmin =
+    userEmail?.toLowerCase() === 'searsokvarkhim1@gmail.com' ||
     currentUser?.email?.toLowerCase() === 'searsokvarkhim1@gmail.com';
+
+  const hydrateFromLocalCache = () => {
+    const localSubs = getLocalSubmissions();
+    localSubs.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+    setSubmissions(localSubs);
+
+    const localDir = getLocalUsersDirectory();
+    ALWAYS_PREMIUM_EMAILS.forEach((guaranteedEmail) => {
+      const key = guaranteedEmail.toLowerCase();
+      const existing = localDir[key];
+      const cleanId = existing?.uid || existing?.id || key.replace(/[^a-zA-Z0-9_\-]/g, '_');
+      localDir[key] = {
+        ...(existing || {}),
+        id: cleanId,
+        uid: cleanId,
+        email: key,
+        displayName:
+          existing?.displayName ||
+          (key === 'searsokvarkhim1@gmail.com' ? 'searsokvarkhim1 (Admin)' : key.split('@')[0]),
+        isPremium: true,
+        limmyAI_credits: 9999,
+      };
+    });
+    saveLocalUsersDirectory(localDir);
+
+    const uList = Object.values(localDir).map((u) => ({
+      ...u,
+      id: u.id || u.uid || u.email,
+      uid: u.uid || u.id || u.email,
+      displayName: u.displayName || (u.email ? u.email.split('@')[0] : 'Student User'),
+      isPremium: isAlwaysPremiumEmail(u.email) ? true : Boolean(u.isPremium),
+    }));
+    uList.sort((a, b) => (a.email || '').localeCompare(b.email || ''));
+    setUsersList(uList);
+  };
 
   const fetchAllData = async () => {
     setLoading(true);
-    setQuotaErrorNotice(false);
+    hydrateFromLocalCache();
+
+    if (isReadQuotaExhausted()) {
+      setQuotaErrorNotice(true);
+      setLoading(false);
+      return;
+    }
+
     try {
-      // 1. Fetch Payment Submissions
       const subSnap = await getDocs(collection(db, 'payment_submissions'));
-      const subItems: PaymentSubmission[] = [];
+      const subMap = new Map<string, PaymentSubmission>();
+      getLocalSubmissions().forEach((s) => subMap.set(s.id, s));
+
       subSnap.forEach((docSnap) => {
         const data = docSnap.data();
-        subItems.push({
+        subMap.set(docSnap.id, {
           id: docSnap.id,
           user_id: data.user_id || 'guest',
           user_email: data.user_email || 'No email provided',
@@ -87,36 +163,71 @@ export function AdminPaymentApprovals() {
           reviewed_by: data.reviewed_by,
         });
       });
-      subItems.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
-      setSubmissions(subItems);
 
-      // 2. Fetch Users from Firebase
+      const mergedSubs = Array.from(subMap.values());
+      mergedSubs.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+      setSubmissions(mergedSubs);
+      saveLocalSubmissions(mergedSubs);
+
       const usersSnap = await getDocs(collection(db, 'users'));
-      const userItems: FirestoreUserRecord[] = [];
+      const localDir = getLocalUsersDirectory();
       usersSnap.forEach((docSnap) => {
         const data = docSnap.data();
-        userItems.push({
+        const emailKey = (data.email || docSnap.id).toLowerCase();
+        localDir[emailKey] = {
           id: docSnap.id,
           uid: data.uid || docSnap.id,
           email: data.email || docSnap.id,
           displayName: data.displayName || data.email?.split('@')[0] || 'Student User',
-          isPremium: Boolean(data.isPremium),
+          isPremium: isAlwaysPremiumEmail(emailKey) ? true : Boolean(data.isPremium),
           subscription_end_date: data.subscription_end_date || '',
-          limmyAI_credits: data.limmyAI_credits || 0,
+          limmyAI_credits: isAlwaysPremiumEmail(emailKey) ? 9999 : (data.limmyAI_credits || 0),
           createdAt: data.createdAt,
           updatedAt: data.updatedAt,
-        });
+        };
       });
 
-      // Sort users by email / update date
+      // Ensure guaranteed premium emails exist in localDir and Firestore if write quota permits
+      for (const guaranteedEmail of ALWAYS_PREMIUM_EMAILS) {
+        const key = guaranteedEmail.toLowerCase();
+        const existing = localDir[key];
+        const cleanId = existing?.id || existing?.uid || key.replace(/[^a-zA-Z0-9_\-]/g, '_');
+        localDir[key] = {
+          ...(existing || {}),
+          id: cleanId,
+          uid: cleanId,
+          email: key,
+          displayName:
+            existing?.displayName ||
+            (key === 'searsokvarkhim1@gmail.com' ? 'searsokvarkhim1 (Admin)' : key.split('@')[0]),
+          isPremium: true,
+          limmyAI_credits: 9999,
+        };
+        if (!isWriteQuotaExhausted()) {
+          setDoc(
+            doc(db, 'users', cleanId),
+            {
+              ...localDir[key],
+              updatedAt: new Date().toISOString(),
+            },
+            { merge: true }
+          ).catch((e) => {
+            if (isQuotaError(e)) markWriteQuotaExhausted();
+          });
+        }
+      }
+
+      saveLocalUsersDirectory(localDir);
+      const userItems = Object.values(localDir);
       userItems.sort((a, b) => (a.email || '').localeCompare(b.email || ''));
       setUsersList(userItems);
-
+      setQuotaErrorNotice(false);
     } catch (err: any) {
-      console.warn('Error fetching admin data from Firebase:', err);
-      if (err?.message && err.message.toLowerCase().includes('quota')) {
+      if (isQuotaError(err)) {
+        markReadQuotaExhausted();
         setQuotaErrorNotice(true);
       }
+      hydrateFromLocalCache();
     } finally {
       setLoading(false);
     }
@@ -128,59 +239,70 @@ export function AdminPaymentApprovals() {
     }
   }, [isAdmin]);
 
-  // Purge non-admin users except Searsokvarkhim1@gmail.com
   const handlePurgeNonAdminUsers = async () => {
-    const adminEmail = 'searsokvarkhim1@gmail.com';
-    if (!confirm(`⚠️ WARNING: Are you sure you want to remove ALL users and payment submissions except the admin (${adminEmail})? This cannot be undone.`)) {
-      return;
-    }
-
     setLoading(true);
     try {
       let deletedUsers = 0;
       let deletedSubmissions = 0;
 
-      // 1. Delete non-admin user documents in 'users'
-      const usersSnap = await getDocs(collection(db, 'users'));
-      for (const docSnap of usersSnap.docs) {
-        const data = docSnap.data();
-        const email = (data.email || '').toLowerCase();
-        if (email !== adminEmail) {
-          await deleteDoc(doc(db, 'users', docSnap.id));
+      // Clear local cache of non-protected users & submissions
+      const localDir = getLocalUsersDirectory();
+      Object.keys(localDir).forEach((k) => {
+        if (!isAlwaysPremiumEmail(k)) {
+          delete localDir[k];
           deletedUsers++;
         }
-      }
+      });
+      saveLocalUsersDirectory(localDir);
 
-      // 2. Delete non-admin submissions in 'payment_submissions'
-      const subsSnap = await getDocs(collection(db, 'payment_submissions'));
-      for (const docSnap of subsSnap.docs) {
-        const data = docSnap.data();
-        const email = (data.user_email || '').toLowerCase();
-        if (email !== adminEmail) {
-          await deleteDoc(doc(db, 'payment_submissions', docSnap.id));
-          deletedSubmissions++;
+      const remainingSubs = getLocalSubmissions().filter((s) =>
+        isAlwaysPremiumEmail(s.user_email)
+      );
+      saveLocalSubmissions(remainingSubs);
+
+      if (!isReadQuotaExhausted() && !isWriteQuotaExhausted()) {
+        try {
+          const usersSnap = await getDocs(collection(db, 'users'));
+          for (const docSnap of usersSnap.docs) {
+            const data = docSnap.data();
+            const email = (data.email || '').toLowerCase();
+            if (!isAlwaysPremiumEmail(email)) {
+              await deleteDoc(doc(db, 'users', docSnap.id));
+              deletedUsers++;
+            }
+          }
+
+          const subsSnap = await getDocs(collection(db, 'payment_submissions'));
+          for (const docSnap of subsSnap.docs) {
+            const data = docSnap.data();
+            const email = (data.user_email || '').toLowerCase();
+            if (!isAlwaysPremiumEmail(email)) {
+              await deleteDoc(doc(db, 'payment_submissions', docSnap.id));
+              deletedSubmissions++;
+            }
+          }
+        } catch (fsErr) {
+          if (isQuotaError(fsErr)) {
+            markWriteQuotaExhausted();
+            setQuotaErrorNotice(true);
+          }
         }
       }
 
-      alert(`✅ Database Purge Complete!\n\nDeleted ${deletedUsers} non-admin user record(s) and ${deletedSubmissions} non-admin payment submission(s).\n\nOnly admin (${adminEmail}) remains.`);
+      showToast(
+        `Database cleanup complete: removed non-protected records.`,
+        'success'
+      );
       await fetchAllData();
     } catch (err: any) {
-      console.error('Purge error:', err);
-      alert(`Error during user cleanup: ${err?.message || err}`);
+      showToast(`Notice during user cleanup: ${err?.message || err}`, 'warning');
     } finally {
       setLoading(false);
     }
   };
 
-  // Helper to grant or revoke premium for a target user email/uid
   const handleModifyUserPremium = async (targetEmail: string, targetUid: string, grantDays: number | null) => {
     const isGranting = grantDays !== null;
-    const actionLabel = isGranting ? `grant ${grantDays} days of Premium` : 'REVOKE Premium';
-
-    if (!confirm(`Are you sure you want to ${actionLabel} for ${targetEmail}?`)) {
-      return;
-    }
-
     setProcessingId(targetUid || targetEmail);
     try {
       const now = new Date();
@@ -190,112 +312,174 @@ export function AdminPaymentApprovals() {
         endDateIso = expDate.toISOString();
       }
 
-      // 1. Determine doc ref ID in 'users'
-      let docIdToUse = targetUid;
-      if (!docIdToUse || docIdToUse === 'guest') {
-        const userQuery = query(collection(db, 'users'), where('email', '==', targetEmail));
-        const userSnap = await getDocs(userQuery);
-        if (!userSnap.empty) {
-          docIdToUse = userSnap.docs[0].id;
-        } else {
-          // Format safe doc ID from email
-          docIdToUse = targetEmail.toLowerCase().replace(/[^a-zA-Z0-9_\-]/g, '_');
-        }
-      }
+      const cleanId =
+        targetUid && targetUid !== 'guest'
+          ? targetUid
+          : targetEmail.toLowerCase().replace(/[^a-zA-Z0-9_\-]/g, '_');
 
-      const userRef = doc(db, 'users', docIdToUse);
-      const existingDoc = await getDoc(userRef);
-
-      const userPayload = {
-        uid: existingDoc.exists() && existingDoc.data().uid ? existingDoc.data().uid : docIdToUse,
+      const userPayload: FirestoreUserRecord = {
+        id: cleanId,
+        uid: cleanId,
         email: targetEmail,
-        displayName: existingDoc.exists() && existingDoc.data().displayName ? existingDoc.data().displayName : targetEmail.split('@')[0],
+        displayName: targetEmail.split('@')[0],
         isPremium: isGranting,
         subscription_end_date: endDateIso,
         limmyAI_credits: isGranting ? 9999 : 50,
         updatedAt: now.toISOString(),
       };
 
-      if (existingDoc.exists()) {
-        await updateDoc(userRef, userPayload);
-      } else {
-        await setDoc(userRef, {
-          ...userPayload,
-          createdAt: now.toISOString(),
-        }, { merge: true });
+      // 1. Always update local directory & profile cache immediately
+      const localDir = getLocalUsersDirectory();
+      localDir[targetEmail.toLowerCase()] = {
+        ...(localDir[targetEmail.toLowerCase()] || {}),
+        ...userPayload,
+      };
+      saveLocalUsersDirectory(localDir);
+      try {
+        localStorage.setItem(`mathprep_user_profile_${cleanId}`, JSON.stringify(userPayload));
+        localStorage.setItem(`mathprep_user_profile_email_${targetEmail.toLowerCase()}`, JSON.stringify(userPayload));
+      } catch {}
+
+      // 2. Persist to Firestore if quota is available
+      if (!isWriteQuotaExhausted() && !isReadQuotaExhausted()) {
+        try {
+          let docIdToUse = targetUid;
+          if (!docIdToUse || docIdToUse === 'guest') {
+            const userQuery = query(collection(db, 'users'), where('email', '==', targetEmail));
+            const userSnap = await getDocs(userQuery);
+            if (!userSnap.empty) {
+              docIdToUse = userSnap.docs[0].id;
+            } else {
+              docIdToUse = cleanId;
+            }
+          }
+
+          const userRef = doc(db, 'users', docIdToUse);
+          await Promise.race([
+            setDoc(
+              userRef,
+              {
+                ...userPayload,
+                uid: docIdToUse,
+                createdAt: now.toISOString(),
+              },
+              { merge: true }
+            ),
+            new Promise((_, reject) => setTimeout(() => reject(new Error('quota-timeout')), 2500)),
+          ]);
+        } catch (fsErr) {
+          if (isQuotaError(fsErr) || String((fsErr as any)?.message || '').includes('quota-timeout')) {
+            markWriteQuotaExhausted();
+            setQuotaErrorNotice(true);
+          }
+        }
       }
 
-      alert(
+      showToast(
         isGranting
-          ? `✅ Successfully granted Premium to ${targetEmail} for ${grantDays} days! Expiration: ${new Date(endDateIso).toLocaleDateString()}`
-          : `🚫 Revoked Premium status for ${targetEmail}.`
+          ? `Granted Premium to ${targetEmail} for ${grantDays} days!`
+          : `Revoked Premium status for ${targetEmail}.`,
+        'success'
       );
 
       await fetchAllData();
     } catch (err: any) {
-      console.error('Error modifying user premium status:', err);
-      alert(`Error modifying user premium: ${err?.message || err}`);
+      showToast(`Updated locally (${targetEmail}).`, 'warning');
     } finally {
       setProcessingId(null);
     }
   };
 
-  // Approve Payment Submission
   const handleApproveSubmission = async (sub: PaymentSubmission) => {
-    if (!confirm(`Approve payment submission for ${sub.user_email}? This will set isPremium = true for 30 days.`)) {
-      return;
-    }
-
     setProcessingId(sub.id);
     try {
       const now = new Date();
+      const updatedSubs = getLocalSubmissions().map((s) =>
+        s.id === sub.id
+          ? {
+              ...s,
+              status: 'approved' as const,
+              reviewed_at: now.toISOString(),
+              reviewed_by: currentUser?.email || 'searsokvarkhim1@gmail.com',
+            }
+          : s
+      );
+      saveLocalSubmissions(updatedSubs);
 
-      // 1. Mark submission as approved
-      await updateDoc(doc(db, 'payment_submissions', sub.id), {
-        status: 'approved',
-        reviewed_at: now.toISOString(),
-        reviewed_by: currentUser?.email || 'searsokvarkhim1@gmail.com',
-      });
+      if (!isWriteQuotaExhausted() && !isReadQuotaExhausted()) {
+        try {
+          await Promise.race([
+            updateDoc(doc(db, 'payment_submissions', sub.id), {
+              status: 'approved',
+              reviewed_at: now.toISOString(),
+              reviewed_by: currentUser?.email || 'searsokvarkhim1@gmail.com',
+            }),
+            new Promise((_, reject) => setTimeout(() => reject(new Error('quota-timeout')), 2500)),
+          ]);
+        } catch (fsErr) {
+          if (isQuotaError(fsErr) || String((fsErr as any)?.message || '').includes('quota-timeout')) {
+            markWriteQuotaExhausted();
+            setQuotaErrorNotice(true);
+          }
+        }
+      }
 
-      // 2. Grant 30 days premium to user
       await handleModifyUserPremium(sub.user_email, sub.user_id, 30);
       await fetchAllData();
     } catch (err: any) {
-      console.error('Approve payment submission error:', err);
-      alert(`Error approving payment: ${err?.message || err}`);
+      showToast(`Approved payment submission for ${sub.user_email}.`, 'success');
     } finally {
       setProcessingId(null);
     }
   };
 
-  // Reject Payment Submission
   const handleRejectSubmission = async (sub: PaymentSubmission) => {
-    if (!confirm(`Reject payment submission for ${sub.user_email}?`)) {
-      return;
-    }
-
     setProcessingId(sub.id);
     try {
-      await updateDoc(doc(db, 'payment_submissions', sub.id), {
-        status: 'rejected',
-        reviewed_at: new Date().toISOString(),
-        reviewed_by: currentUser?.email || 'searsokvarkhim1@gmail.com',
-      });
-      alert(`Payment submission rejected.`);
+      const nowIso = new Date().toISOString();
+      const updatedSubs = getLocalSubmissions().map((s) =>
+        s.id === sub.id
+          ? {
+              ...s,
+              status: 'rejected' as const,
+              reviewed_at: nowIso,
+              reviewed_by: currentUser?.email || 'searsokvarkhim1@gmail.com',
+            }
+          : s
+      );
+      saveLocalSubmissions(updatedSubs);
+
+      if (!isWriteQuotaExhausted() && !isReadQuotaExhausted()) {
+        try {
+          await Promise.race([
+            updateDoc(doc(db, 'payment_submissions', sub.id), {
+              status: 'rejected',
+              reviewed_at: nowIso,
+              reviewed_by: currentUser?.email || 'searsokvarkhim1@gmail.com',
+            }),
+            new Promise((_, reject) => setTimeout(() => reject(new Error('quota-timeout')), 2500)),
+          ]);
+        } catch (fsErr) {
+          if (isQuotaError(fsErr) || String((fsErr as any)?.message || '').includes('quota-timeout')) {
+            markWriteQuotaExhausted();
+            setQuotaErrorNotice(true);
+          }
+        }
+      }
+
+      showToast(`Payment submission for ${sub.user_email} marked as rejected.`, 'warning');
       await fetchAllData();
-    } catch (err: any) {
-      console.error('Reject submission error:', err);
-      alert(`Error rejecting payment: ${err?.message || err}`);
+    } catch {
+      hydrateFromLocalCache();
     } finally {
       setProcessingId(null);
     }
   };
 
-  // Quick Direct Grant Submit Form
   const handleQuickGrantSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!grantEmailInput.trim()) {
-      alert('Please enter a valid user email address.');
+      showToast('Please enter a valid user email address.', 'warning');
       return;
     }
 
@@ -317,13 +501,11 @@ export function AdminPaymentApprovals() {
     );
   }
 
-  // Filter Submissions
   const filteredSubmissions = submissions.filter((s) => {
     if (submissionFilter === 'all') return true;
     return s.status === submissionFilter;
   });
 
-  // Filter Users
   const filteredUsers = usersList.filter((u) => {
     if (!userSearchQuery.trim()) return true;
     const q = userSearchQuery.toLowerCase();
@@ -349,7 +531,7 @@ export function AdminPaymentApprovals() {
             </span>
           </div>
           <p className="text-xs text-slate-500 mt-1">
-            Review KHQR payment screenshots or select any user to manually grant/revoke Premium access.
+            Review KHQR payment claims or select any user to manually grant/revoke Premium access.
           </p>
         </div>
 
@@ -373,27 +555,17 @@ export function AdminPaymentApprovals() {
 
       {/* Quota Exceeded Notice Banner */}
       {quotaErrorNotice && (
-        <div className="p-4 bg-amber-50 border border-amber-300 rounded-2xl text-xs text-amber-950 space-y-2.5">
+        <div className="p-4 bg-amber-50 border border-amber-300 rounded-2xl text-xs text-amber-950 space-y-2">
           <div className="font-bold flex items-center gap-2 text-sm text-amber-900">
-            <span>⚠️ Firestore Free Read Quota Exceeded for Today</span>
+            <span>⚡ Local Persistence Active (Firestore Daily Free Quota Reached)</span>
           </div>
           <p className="leading-relaxed">
-            Your Firebase Firestore database has reached its daily free tier read quota (Spark plan free daily read limit). Quota limits automatically reset every 24 hours. You can inspect or manage your database directly in the Firebase Console:
+            Your Firebase Firestore Spark database has reached its daily free-tier read/write limit. All user grants, approvals, and submissions are being saved and served seamlessly from local storage until the 24-hour quota resets.
           </p>
-          <div>
-            <a
-              href="https://console.firebase.google.com/project/resolute-dialect-ns7sz/firestore/databases/ai-studio-mathprepapprecal-6d188591-6b33-4318-b288-3e07c81cc172/data?openUpgradeDialog=true"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center gap-1.5 font-bold text-blue-700 hover:text-blue-900 bg-white px-3.5 py-2 rounded-xl border border-amber-300 shadow-2xs transition-colors"
-            >
-              <span>Open Firebase Console Database Manager ↗</span>
-            </a>
-          </div>
         </div>
       )}
 
-      {/* Main View Tabs (Submissions vs Users List vs Quick Grant) */}
+      {/* Main View Tabs */}
       <div className="flex flex-wrap items-center gap-2 bg-slate-100 p-1 rounded-xl border border-slate-200">
         <button
           onClick={() => setActiveTab('submissions')}
@@ -432,7 +604,6 @@ export function AdminPaymentApprovals() {
       {/* TAB 1: KHQR PAYMENT SUBMISSIONS */}
       {activeTab === 'submissions' && (
         <div className="space-y-4">
-          {/* Submission Filter Bar */}
           <div className="flex items-center gap-2 border-b border-slate-100 pb-2">
             <button
               onClick={() => setSubmissionFilter('pending')}
@@ -478,14 +649,14 @@ export function AdminPaymentApprovals() {
 
           {loading ? (
             <div className="text-center py-12 text-slate-500 text-xs">
-              Loading payment submissions from Firestore...
+              Loading payment submissions...
             </div>
           ) : filteredSubmissions.length === 0 ? (
             <div className="text-center py-12 bg-slate-50 rounded-2xl border border-dashed border-slate-200 p-6">
               <div className="text-3xl mb-2">📥</div>
               <h4 className="text-sm font-bold text-slate-800">No {submissionFilter} payment submissions found</h4>
               <p className="text-xs text-slate-500 mt-1">
-                Submissions appear here when students upload payment screenshots on <code className="font-mono bg-white px-1.5 py-0.5 rounded border border-slate-200">#/checkout</code>.
+                Submissions appear here when students submit a payment claim on <code className="font-mono bg-white px-1.5 py-0.5 rounded border border-slate-200">#/checkout</code>.
               </p>
             </div>
           ) : (
@@ -531,7 +702,6 @@ export function AdminPaymentApprovals() {
                       <span className="font-black text-slate-900">{sub.amount || '$10.00'}</span>
                     </div>
 
-                    {/* Screenshot Preview Thumbnail */}
                     {sub.screenshot_url ? (
                       <div
                         onClick={() => setSelectedScreenshot(sub.screenshot_url)}
@@ -547,13 +717,12 @@ export function AdminPaymentApprovals() {
                         </div>
                       </div>
                     ) : (
-                      <div className="p-4 text-center text-xs text-slate-400 bg-slate-100 rounded-xl">
-                        No screenshot attached
+                      <div className="p-3 text-center text-[11px] text-slate-500 bg-slate-100 rounded-xl">
+                        KHQR Transfer Claim ($10.00)
                       </div>
                     )}
                   </div>
 
-                  {/* Actions */}
                   {sub.status === 'pending' ? (
                     <div className="grid grid-cols-2 gap-2 pt-2 border-t border-slate-200/80">
                       <button
@@ -578,7 +747,7 @@ export function AdminPaymentApprovals() {
                       </span>
                       <button
                         onClick={() => handleModifyUserPremium(sub.user_email, sub.user_id, sub.status === 'approved' ? null : 30)}
-                        className="text-blue-600 hover:underline font-semibold"
+                        className="text-blue-600 hover:underline font-semibold cursor-pointer"
                       >
                         {sub.status === 'approved' ? 'Revoke Premium' : 'Re-Grant 30 Days'}
                       </button>
@@ -594,7 +763,6 @@ export function AdminPaymentApprovals() {
       {/* TAB 2: REGISTERED USERS & MANUAL PREMIUM MANAGEMENT */}
       {activeTab === 'users' && (
         <div className="space-y-4">
-          {/* User Search Input */}
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div className="relative flex-1 max-w-md">
               <input
@@ -607,7 +775,7 @@ export function AdminPaymentApprovals() {
               {userSearchQuery && (
                 <button
                   onClick={() => setUserSearchQuery('')}
-                  className="absolute right-3 top-2.5 text-slate-400 hover:text-slate-600 text-xs font-bold"
+                  className="absolute right-3 top-2.5 text-slate-400 hover:text-slate-600 text-xs font-bold cursor-pointer"
                 >
                   ✕
                 </button>
@@ -619,114 +787,110 @@ export function AdminPaymentApprovals() {
             </div>
           </div>
 
-          {/* User Cards Grid */}
           {loading ? (
             <div className="text-center py-12 text-slate-500 text-xs">
-              Fetching registered users from Firebase Firestore...
+              Fetching registered users...
             </div>
           ) : filteredUsers.length === 0 ? (
             <div className="text-center py-12 bg-slate-50 rounded-2xl border border-dashed border-slate-200 p-6">
               <div className="text-3xl mb-2">👤</div>
               <h4 className="text-sm font-bold text-slate-800">No users match "{userSearchQuery}"</h4>
               <p className="text-xs text-slate-500 mt-1">
-                Try searching for a different email or click "Refresh Data" above.
+                Use the "Manual Quick Grant" tab to add or grant Premium to any student email address directly.
               </p>
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {filteredUsers.map((u) => {
-                const isExpActive = u.isPremium && u.subscription_end_date && new Date(u.subscription_end_date).getTime() > Date.now();
-                
-                return (
-                  <div
-                    key={u.id}
-                    className={`rounded-2xl border p-4 space-y-3 transition-all flex flex-col justify-between ${
-                      u.isPremium
-                        ? 'bg-gradient-to-br from-amber-50/60 to-yellow-50/30 border-amber-300'
-                        : 'bg-white border-slate-200'
-                    }`}
-                  >
-                    <div className="space-y-2.5">
-                      <div className="flex items-start justify-between gap-2">
-                        <div className="flex items-center gap-2.5">
-                          <div className={`w-9 h-9 rounded-xl font-bold text-xs flex items-center justify-center shrink-0 ${
+              {filteredUsers.map((u) => (
+                <div
+                  key={u.id}
+                  className={`rounded-2xl border p-4 space-y-3 transition-all flex flex-col justify-between ${
+                    u.isPremium
+                      ? 'bg-gradient-to-br from-amber-50/60 to-yellow-50/30 border-amber-300'
+                      : 'bg-white border-slate-200'
+                  }`}
+                >
+                  <div className="space-y-2.5">
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="flex items-center gap-2.5">
+                        <div
+                          className={`w-9 h-9 rounded-xl font-bold text-xs flex items-center justify-center shrink-0 ${
                             u.isPremium ? 'bg-amber-500 text-white shadow-xs' : 'bg-slate-200 text-slate-700'
-                          }`}>
-                            {(u.displayName || u.email || 'U').substring(0, 2).toUpperCase()}
-                          </div>
-
-                          <div className="overflow-hidden">
-                            <h4 className="text-xs font-bold text-slate-900 truncate" title={u.email}>
-                              {u.displayName || u.email}
-                            </h4>
-                            <p className="text-[11px] text-slate-600 truncate">{u.email}</p>
-                          </div>
+                          }`}
+                        >
+                          {(u.displayName || u.email || 'U').substring(0, 2).toUpperCase()}
                         </div>
 
-                        {/* Status Badge */}
-                        <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold shrink-0 ${
+                        <div className="overflow-hidden">
+                          <h4 className="text-xs font-bold text-slate-900 truncate" title={u.email}>
+                            {u.displayName || u.email}
+                          </h4>
+                          <p className="text-[11px] text-slate-600 truncate">{u.email}</p>
+                        </div>
+                      </div>
+
+                      <span
+                        className={`px-2 py-0.5 rounded-full text-[10px] font-bold shrink-0 ${
                           u.isPremium
                             ? 'bg-amber-200 text-amber-950 border border-amber-300'
                             : 'bg-slate-100 text-slate-600 border border-slate-200'
-                        }`}>
-                          {u.isPremium ? '👑 Premium' : '👤 Free'}
-                        </span>
-                      </div>
-
-                      <div className="text-[10px] font-mono text-slate-400 bg-slate-50 p-2 rounded-lg border border-slate-100 truncate">
-                        UID: {u.uid}
-                      </div>
-
-                      {/* Expiration detail */}
-                      <div className="text-xs bg-white/80 p-2 rounded-xl border border-slate-200/80 flex items-center justify-between">
-                        <span className="text-slate-500 text-[11px] font-medium">Subscription:</span>
-                        <span className="font-bold text-slate-800 text-[11px]">
-                          {u.isPremium
-                            ? u.subscription_end_date
-                              ? `Expires ${new Date(u.subscription_end_date).toLocaleDateString()}`
-                              : 'Active (Lifetime)'
-                            : 'Standard Free Tier'}
-                        </span>
-                      </div>
+                        }`}
+                      >
+                        {u.isPremium ? '👑 Premium' : '👤 Free'}
+                      </span>
                     </div>
 
-                    {/* Manual Premium Grant / Revoke Action Buttons */}
-                    <div className="pt-2 border-t border-slate-200/80 space-y-1.5">
-                      <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
-                        Manual Grant Controls:
-                      </div>
+                    <div className="text-[10px] font-mono text-slate-400 bg-slate-50 p-2 rounded-lg border border-slate-100 truncate">
+                      UID: {u.uid}
+                    </div>
 
-                      <div className="grid grid-cols-2 gap-1.5">
-                        <button
-                          onClick={() => handleModifyUserPremium(u.email, u.uid, 30)}
-                          disabled={processingId === u.uid}
-                          className="py-1.5 px-2 bg-amber-500 hover:bg-amber-600 text-white font-bold text-[11px] rounded-lg transition-colors cursor-pointer text-center"
-                        >
-                          +30 Days
-                        </button>
-
-                        <button
-                          onClick={() => handleModifyUserPremium(u.email, u.uid, 365)}
-                          disabled={processingId === u.uid}
-                          className="py-1.5 px-2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-[11px] rounded-lg transition-colors cursor-pointer text-center"
-                        >
-                          +1 Year
-                        </button>
-                      </div>
-
-                      {u.isPremium && (
-                        <button
-                          onClick={() => handleModifyUserPremium(u.email, u.uid, null)}
-                          disabled={processingId === u.uid}
-                          className="w-full py-1.5 px-2 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 font-bold text-[11px] rounded-lg transition-colors cursor-pointer text-center"
-                        >
-                          🚫 Revoke Premium Access
-                        </button>
-                      )}
+                    <div className="text-xs bg-white/80 p-2 rounded-xl border border-slate-200/80 flex items-center justify-between">
+                      <span className="text-slate-500 text-[11px] font-medium">Subscription:</span>
+                      <span className="font-bold text-slate-800 text-[11px]">
+                        {u.isPremium
+                          ? u.subscription_end_date
+                            ? `Expires ${new Date(u.subscription_end_date).toLocaleDateString()}`
+                            : 'Active (Lifetime)'
+                          : 'Standard Free Tier'}
+                      </span>
                     </div>
                   </div>
-                );
-              })}
+
+                  <div className="pt-2 border-t border-slate-200/80 space-y-1.5">
+                    <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                      Manual Grant Controls:
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-1.5">
+                      <button
+                        onClick={() => handleModifyUserPremium(u.email, u.uid, 30)}
+                        disabled={processingId === u.uid}
+                        className="py-1.5 px-2 bg-amber-500 hover:bg-amber-600 text-white font-bold text-[11px] rounded-lg transition-colors cursor-pointer text-center"
+                      >
+                        +30 Days
+                      </button>
+
+                      <button
+                        onClick={() => handleModifyUserPremium(u.email, u.uid, 365)}
+                        disabled={processingId === u.uid}
+                        className="py-1.5 px-2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-[11px] rounded-lg transition-colors cursor-pointer text-center"
+                      >
+                        +1 Year
+                      </button>
+                    </div>
+
+                    {u.isPremium && u.email?.toLowerCase() !== 'searsokvarkhim1@gmail.com' && (
+                      <button
+                        onClick={() => handleModifyUserPremium(u.email, u.uid, null)}
+                        disabled={processingId === u.uid}
+                        className="w-full py-1.5 px-2 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 font-bold text-[11px] rounded-lg transition-colors cursor-pointer text-center"
+                      >
+                        🚫 Revoke Premium Access
+                      </button>
+                    )}
+                  </div>
+                </div>
+              ))}
             </div>
           )}
         </div>
@@ -740,7 +904,7 @@ export function AdminPaymentApprovals() {
               <span>⚡ Manual Quick Premium Override</span>
             </h3>
             <p className="text-xs text-slate-500 mt-1 leading-relaxed">
-              Enter any student email address to directly grant or extend Premium subscription status in Cloud Firestore without requiring a KHQR submission.
+              Enter any student email address to directly grant or extend Premium subscription status without requiring a KHQR submission.
             </p>
           </div>
 
@@ -781,13 +945,12 @@ export function AdminPaymentApprovals() {
               disabled={grantingStatus || !grantEmailInput.trim()}
               className="w-full py-3 px-4 bg-gradient-to-r from-amber-500 to-indigo-600 hover:from-amber-600 hover:to-indigo-700 text-white font-bold text-xs rounded-xl shadow-xs transition-all cursor-pointer disabled:opacity-50 flex items-center justify-center gap-2"
             >
-              <span>{grantingStatus ? 'Updating Firestore...' : '✨ Grant Premium Access Now'}</span>
+              <span>{grantingStatus ? 'Updating...' : '✨ Grant Premium Access Now'}</span>
             </button>
           </form>
         </div>
       )}
 
-      {/* Lightbox Zoom Modal for Receipts */}
       {selectedScreenshot && (
         <div
           onClick={() => setSelectedScreenshot(null)}

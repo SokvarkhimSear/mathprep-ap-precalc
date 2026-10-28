@@ -7,8 +7,14 @@ import {
   buildExpandedFrqsForTopic,
   generateMassiveQuestionBankDataset,
 } from './seedQuestionBank.js';
+import {
+  AP_CURRICULUM,
+  UNIT_METADATA,
+  getUnitIdForTopic,
+  getUnitKeyForTopic,
+} from '../lib/ap-curriculum.js';
 
-const TOPICS_DATA = [
+const LEGACY_TOPICS_DATA = [
   // =========================================================================
   // UNIT 1: POLYNOMIAL AND RATIONAL FUNCTIONS (Topics 1.1 - 1.16)
   // =========================================================================
@@ -5157,6 +5163,126 @@ const TOPICS_DATA = [
   }
 ];
 
+// Map each of the 71 topics in AP_CURRICULUM to its rich mathematical source in LEGACY_TOPICS_DATA
+const LEGACY_BY_ID = new Map(LEGACY_TOPICS_DATA.map((t) => [String(t.topic_id), t]));
+
+const TOPIC_SOURCE_MAPPING = {
+  '1.1': '1.1',
+  '1.2': '1.2',
+  '1.3': '1.3',
+  '1.4': '1.4',
+  '1.5': '1.5',
+  '1.6': '1.6',
+  '1.7': '1.7',
+  '1.8': '1.8',
+  '1.9': '1.9',
+  '1.10': '1.10',
+  '1.11': '1.11',
+  '1.12': '1.12',
+  '1.13': '2.6',
+  '1.14': '2.5',
+  'Unit 1 REVIEW': '1.6',
+  '2.1': '2.1',
+  '2.2': '2.2',
+  '2.3': '2.2',
+  '2.4': '2.3',
+  '2.5A': '2.5',
+  '2.5B': '2.5',
+  '2.6': '2.6',
+  '2.7A': '1.12',
+  '2.7B': '1.12',
+  '2.8': '1.13',
+  'Unit 2A REVIEW': '2.2',
+  '2.9': '1.14',
+  '2.10': '1.13',
+  '2.11': '1.15',
+  '2.12': '1.16',
+  '2.13A': '2.4',
+  '2.13B': '2.4',
+  '2.14': '2.6',
+  '2.15': '2.7',
+  'Unit 2B REVIEW': '2.7',
+  '3.1': '3.1',
+  '3.2': '3.2',
+  '3.3': '3.3',
+  '3.4': '3.4',
+  '3.5': '3.5',
+  '3.6': '3.6',
+  '3.7': '3.7',
+  '3.8': '3.8',
+  '3.9': '3.9',
+  '3.10': '3.10',
+  '3.11': '3.11',
+  '3.12': '3.10',
+  '3.13': '3.11',
+  '3.14': '3.11',
+  '3.15': '3.11',
+  'Unit 3 REVIEW': '3.5',
+  '4.1': '4.1',
+  '4.2': '4.2',
+  '4.3': '4.2',
+  '4.4': '4.3',
+  '4.5': '4.4',
+  '4.6A': '4.3',
+  '4.6B': '4.3',
+  '4.6C': '4.3',
+  '4.7': '4.4',
+  'Unit 4A REVIEW': '4.3',
+  '4.8A': '4.5',
+  '4.8B': '4.6',
+  '4.9': '4.7',
+  '4.10': '4.9',
+  '4.11': '4.8',
+  '4.12': '4.10',
+  '4.13A': '4.10',
+  '4.13B': '4.10',
+  '4.14': '4.9',
+  'Unit 4B REVIEW': '4.10',
+};
+
+const TOPICS_DATA = [];
+for (const unitSection of AP_CURRICULUM) {
+  for (const topicMeta of unitSection.topics) {
+    const topicId = topicMeta.id;
+    const topicTitle = topicMeta.title;
+    const sourceKey = TOPIC_SOURCE_MAPPING[topicId] || '1.1';
+    const base = LEGACY_BY_ID.get(sourceKey) || LEGACY_TOPICS_DATA[0];
+
+    const adaptedSubTopics = (base.sub_topics || []).map((st, idx) => ({
+      ...st,
+      sub_topic_id: `${topicId}.${idx + 1}`,
+      sub_topic_title:
+        idx === 0
+          ? `${topicTitle} — Core Algebraic & Analytical Foundations`
+          : `${topicTitle} — Graphical, Tabular & Contextual Modeling`,
+    }));
+
+    const isReview = Boolean(topicMeta.isReview);
+    const adaptedOverview = isReview
+      ? `Comprehensive synthesis and exam review for **${unitSection.title}** (${unitSection.subtitle}). Consolidates all core formulas, rate-of-change analyses, graphical behaviors, and multi-step AP Free-Response justification strategies across ${unitSection.shortTitle}.`
+      : base.conceptual_overview;
+
+    TOPICS_DATA.push({
+      ...base,
+      unit: unitSection.number,
+      unit_id: unitSection.id,
+      unit_key: unitSection.unitKey,
+      topic_id: topicId,
+      topic_title: topicTitle,
+      conceptual_overview: adaptedOverview,
+      sub_topics: adaptedSubTopics,
+      mcq: (base.mcq || []).map((q, qIdx) => ({
+        ...q,
+        question_id: `${topicId.replace(/[^a-zA-Z0-9]/g, '_')}_mcq_${qIdx + 1}`,
+      })),
+      frq: (base.frq || []).map((f, fIdx) => ({
+        ...f,
+        frq_id: `${topicId.replace(/[^a-zA-Z0-9]/g, '_')}_frq_${fIdx + 1}`,
+      })),
+    });
+  }
+}
+
 function buildSimpleAnalogyForTopic(raw) {
   const analogies = {
     1: 'Think of input $x$ as the horizontal step you take and output $f(x)$ as your height on a roller-coaster track: the slope between two points tells you your average climb or drop, and whether that slope gets steeper or flatter tells you if the track bends upward like a cup (concave up) or downward like an umbrella (concave down).',
@@ -5194,10 +5320,8 @@ function buildExhaustiveTextbookLesson(raw) {
     };
   }
 
-  // 1. Concept Description: Brief, plain-English summary of what the concept is and why it matters
-  const concept_description = `${raw.conceptual_overview} Mastering **Topic ${raw.topic_id} (${raw.topic_title})** matters because it gives you the direct mathematical rule needed to set up, evaluate, and interpret AP Precalculus multiple-choice and free-response questions without guesswork.`;
+  const concept_description = `${raw.conceptual_overview} Mastering **${raw.topic_id} (${raw.topic_title})** matters because it gives you the direct mathematical rule needed to set up, evaluate, and interpret AP Precalculus multiple-choice and free-response questions without guesswork.`;
 
-  // 2. Core Formula: Essential equation(s) formatted in KaTeX, with variables clearly defined
   const coreFormulaBlocks = raw.sub_topics.flatMap((st) =>
     (st.essential_formulas || []).map(
       (ef) =>
@@ -5206,7 +5330,6 @@ function buildExhaustiveTextbookLesson(raw) {
   );
   const core_formula = coreFormulaBlocks.join('\n\n');
 
-  // 3. Simple Explanation: Direct, intuitive breakdown of how to apply the formula, using simple analogies
   const analogyText = buildSimpleAnalogyForTopic(raw);
   const principleBullets = (raw.core_principles || []).map(
     (cp, idx) => `${idx + 1}. **${cp.heading}:** ${cp.content_latex}`
@@ -5257,7 +5380,6 @@ function buildExhaustiveTextbookLesson(raw) {
     model_mcqs: [],
     model_frqs: [],
     synthesis_summary: '',
-    // Keep backward-compatible fields inside `lesson` so any legacy reader works
     title: `${raw.topic_id}: ${raw.topic_title}`,
     overview: concept_description,
     keyConcepts: raw.core_principles.map((cp) => `**${cp.heading}:** ${cp.content_latex}`),
@@ -5271,7 +5393,6 @@ function buildExhaustiveTextbookLesson(raw) {
 function buildTopicBankPracticeSection(raw) {
   const subTopics = ensureSubTopicsForTopic(raw.topic_id, raw.topic_title, raw.sub_topics);
 
-  // Generate all 44 Question Bank MCQs and 8 Question Bank FRQs (52 questions/topic) for this designated topic
   const bankMcqDocs = buildExpandedMcqsForTopic(raw, subTopics);
   const bankFrqDocs = buildExpandedFrqsForTopic(raw, subTopics);
 
@@ -5325,13 +5446,15 @@ function buildCanonicalTopicObject(raw) {
     calculator: q.calculator_active ? 'Required' : 'No Calculator',
     isCalculatorActive: q.calculator_active,
     difficulty: q.difficulty,
-    skill: `Topic ${raw.topic_id} (${q.sub_topic_id})`,
+    skill: `${raw.topic_id} (${q.sub_topic_id})`,
     explanation: `${q.explanation_latex}\n\n**Exam Trap:** ${q.exam_trap}`,
     trapExplanation: q.exam_trap,
   }));
 
   return {
     unit: raw.unit,
+    unit_id: raw.unit_id || getUnitIdForTopic(raw.topic_id),
+    unit_key: raw.unit_key || getUnitKeyForTopic(raw.topic_id),
     topic_id: raw.topic_id,
     topic_title: raw.topic_title,
     topicId: raw.topic_id,
@@ -5362,14 +5485,16 @@ function buildCanonicalTopicObject(raw) {
 }
 
 const fullCurriculum = {
-  curriculum_version: '4.0.0-lean-schema-with-full-question-bank',
+  curriculum_version: '5.0.0-ap-curriculum-71-topics',
   generated_at: new Date().toISOString(),
   total_topics: TOPICS_DATA.length,
   units_summary: {
-    unit_1: TOPICS_DATA.filter((t) => t.unit === 1).length,
-    unit_2: TOPICS_DATA.filter((t) => t.unit === 2).length,
-    unit_3: TOPICS_DATA.filter((t) => t.unit === 3).length,
-    unit_4: TOPICS_DATA.filter((t) => t.unit === 4).length,
+    unit_1: TOPICS_DATA.filter((t) => t.unit_id === 'unit_1').length,
+    unit_2a: TOPICS_DATA.filter((t) => t.unit_id === 'unit_2a').length,
+    unit_2b: TOPICS_DATA.filter((t) => t.unit_id === 'unit_2b').length,
+    unit_3: TOPICS_DATA.filter((t) => t.unit_id === 'unit_3').length,
+    unit_4a: TOPICS_DATA.filter((t) => t.unit_id === 'unit_4a').length,
+    unit_4b: TOPICS_DATA.filter((t) => t.unit_id === 'unit_4b').length,
   },
   topics: TOPICS_DATA.map(buildCanonicalTopicObject),
 };
@@ -5392,81 +5517,22 @@ console.log(
   `Successfully synchronized ${bankDataset.total_questions} Question Bank questions (${bankDataset.total_mcq} MCQs + ${bankDataset.total_frq} FRQs, ${bankDataset.total_published} published) at ${bankOutFile}`
 );
 
-// Also generate src/data/curriculumData.ts so the Student Lessons Hub & Formula Bank have all 44 lean topics built-in
-const unitsList = [
-  {
-    id: 'unit-1',
-    number: 1,
-    title: 'Polynomial & Rational Functions',
-    subtitle: 'Rates of change, zeros, rational asymptotes, Holes, compositions & inverses (Topics 1.1–1.16)',
-    examWeight: '30–40% of Exam',
-    description:
-      'Master all 16 sub-units of Unit 1: covariation in tandem, average rate of change, linear/quadratic/polynomial functions, complex zeros, rational end behavior, vertical asymptotes, removable discontinuities (holes), binomial theorem, function composition, inverses, and logarithmic properties.',
-    topicsCount: 16,
-    keyTopics: [
-      'Topics 1.1–1.3: Change in Tandem, Rates of Change & Linear/Quadratic Concavity',
-      'Topics 1.4–1.6: Polynomial Extrema, Multiplicity of Zeros & End Behavior Limits',
-      'Topics 1.7–1.10: Rational End Behavior, Zeros, Vertical Asymptotes & Holes',
-      'Topics 1.11–1.13: Binomial Theorem, Function Composition & Inverse Functions',
-      'Topics 1.14–1.16: Logarithmic Expressions, Functions & Algebraic Properties',
-    ],
-    color: 'blue',
-  },
-  {
-    id: 'unit-2',
-    number: 2,
-    title: 'Exponential & Logarithmic Functions',
-    subtitle: 'Arithmetic/geometric sequences, exponential growth, log equations & semi-log plots (Topics 2.1–2.7)',
-    examWeight: '27–40% of Exam',
-    description:
-      'Master all 7 sub-units of Unit 2: arithmetic and geometric sequences, exponential growth/decay functions, half-life and doubling time estimation, exponential and logarithmic equations, regression modeling with residual analysis, and semi-log plot linearization.',
-    topicsCount: 7,
-    keyTopics: [
-      'Topic 2.1: Arithmetic ($d$) and Geometric ($r$) Discrete Sequences',
-      'Topics 2.2–2.3: Exponential Functions, Percent Growth & Doubling/Half-Life Models',
-      'Topic 2.4: Solving Exponential & Logarithmic Equations + Extraneous Roots',
-      'Topics 2.5–2.6: Exponential & Logarithmic Context Modeling & Residual Plots',
-      'Topic 2.7: Semi-Log Plots $(x, \\log_b y)$ & Linearized Exponential Data',
-    ],
-    color: 'indigo',
-  },
-  {
-    id: 'unit-3',
-    number: 3,
-    title: 'Trigonometric & Polar Functions',
-    subtitle: 'Periodic phenomena, unit circle radians, sinusoidal waves, identities & polar curves (Topics 3.1–3.11)',
-    examWeight: '30–35% of Exam',
-    description:
-      'Master all 11 sub-units of Unit 3: periodic phenomena, unit circle radian trigonometry, sinusoidal graphs and phase-shift transformations, harmonic modeling, tangent/secant/cosecant/cotangent functions, inverse trig restrictions, trig identities/equations, and polar curves $(r, \\theta)$.',
-    topicsCount: 11,
-    keyTopics: [
-      'Topics 3.1–3.3: Periodic Phenomena, Radian Measure & Unit Circle Coordinates',
-      'Topics 3.4–3.7: Sinusoidal Graphs, Transformations & Real-World Harmonic Modeling',
-      'Topics 3.8–3.9: Tangent Asymptotes & Inverse Trig Principal Domains ($\\arcsin, \\arccos, \\arctan$)',
-      'Topic 3.10: Trigonometric Equations, Pythagorean & Sum/Double-Angle Identities',
-      'Topic 3.11: Reciprocal Trig Functions, Polar Coordinates, Roses/Limaçons & Polar AROC',
-    ],
-    color: 'sky',
-  },
-  {
-    id: 'unit-4',
-    number: 4,
-    title: 'Parameters, Vectors & Matrices',
-    subtitle: 'Parametric planar motion, conic sections, 2D vectors & matrix transformations (Topics 4.1–4.10)',
-    examWeight: 'Advanced Topics / College Credit',
-    description:
-      'Master all 10 sub-units of Unit 4: parametric curves and eliminating the parameter, linear and cyclical planar motion, conic sections (ellipses, hyperbolas, parabolas), 2D vectors and dot products, vector-valued functions, matrix inverses, Markov chains, and linear transformations.',
-    topicsCount: 10,
-    keyTopics: [
-      'Topics 4.1–4.2: Parametric Equations, Orientation & Constant-Velocity Linear Motion',
-      'Topics 4.3–4.4: Parametric Conic Sections & Implicitly Defined Quadratic Relations',
-      'Topics 4.5–4.7: 2D Unit Vectors, Dot Products, Orthogonality & Vector-Valued Motion',
-      'Topics 4.8–4.9: Matrix Equations $AX = B$, $2 \\times 2$ Inverses & Row-by-Column Multiplication',
-      'Topic 4.10: Matrices as Linear Transformations, Rotations $R_\\theta$ & Area Scaling $|\\det(A)|$',
-    ],
-    color: 'slate',
-  },
-];
+// Also generate src/data/curriculumData.ts from AP_CURRICULUM (6 unit sections, 71 topics)
+const unitsList = AP_CURRICULUM.map((u) => ({
+  id: u.unitId,
+  unitId: u.id,
+  unitKey: u.unitKey,
+  number: u.number,
+  shortTitle: u.shortTitle,
+  title: u.name,
+  fullTitle: u.title,
+  subtitle: u.subtitle,
+  examWeight: u.examWeight,
+  description: u.description,
+  topicsCount: u.topics.length,
+  keyTopics: u.topics.slice(0, 5).map((t) => `${t.id}: ${t.title}`),
+  color: u.color,
+}));
 
 const frontendLessons = TOPICS_DATA.map((raw) => {
   const we = raw.worked_examples[0] || { problem_latex: '', solution_steps: [] };
@@ -5493,8 +5559,10 @@ const frontendLessons = TOPICS_DATA.map((raw) => {
   }
 
   return {
-    id: `les-${raw.topic_id.replace('.', '-')}`,
+    id: `les-${raw.topic_id.replace(/[^a-zA-Z0-9]/g, '-')}`,
     unitNumber: raw.unit,
+    unitId: raw.unit_id,
+    unitKey: raw.unit_key,
     topicCode: raw.topic_id,
     title: raw.topic_title,
     duration: `${exhaustiveLesson.reading_time_minutes} min read`,
@@ -5535,11 +5603,13 @@ for (const raw of TOPICS_DATA) {
   for (const st of raw.sub_topics) {
     for (const ef of st.essential_formulas) {
       frontendFormulas.push({
-        id: `form-${raw.topic_id.replace('.', '-')}-${formIdx++}`,
+        id: `form-${raw.topic_id.replace(/[^a-zA-Z0-9]/g, '-')}-${formIdx++}`,
         unitNumber: raw.unit,
+        unitId: raw.unit_id,
+        unitKey: raw.unit_key,
         topicCode: raw.topic_id,
         subTopicId: st.sub_topic_id,
-        category: `Topic ${raw.topic_id}: ${raw.topic_title}`,
+        category: `${raw.topic_id}: ${raw.topic_title}`,
         name: ef.name,
         formula: ef.latex,
         description: ef.description,
@@ -5563,5 +5633,3 @@ fs.writeFileSync(srcDataPath, tsFileContent, 'utf8');
 console.log(
   `Successfully generated ${frontendLessons.length} lean AP Precalculus lessons (with all Question Bank items embedded in their designated topics) and ${frontendFormulas.length} formulas in ${srcDataPath}`
 );
-
-

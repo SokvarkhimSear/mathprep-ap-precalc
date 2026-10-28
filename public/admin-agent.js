@@ -17,9 +17,9 @@ Enforce this strict, simplified 3-part content schema for every single topic (NO
 3. Simple Explanation: A direct, intuitive breakdown of how to apply the formula, using simple analogies.`;
   window.CURRICULUM_GENERATION_SYSTEM_PROMPT = CURRICULUM_GENERATION_SYSTEM_PROMPT;
 
-  // 1. Official 44-Topic AP Precalculus Curriculum Registry (Units 1 - 4)
+  // 1. Official 71-Topic AP Precalculus Curriculum Registry (Units 1, 2A, 2B, 3, 4A, 4B)
   const AP_CURRICULUM_REGISTRY = {
-    1: [
+    '1': [
       { id: '1.1', title: 'Change in Tandem' },
       { id: '1.2', title: 'Rates of Change' },
       { id: '1.3', title: 'Rates of Change in Linear and Quadratic Functions' },
@@ -31,56 +31,87 @@ Enforce this strict, simplified 3-part content schema for every single topic (NO
       { id: '1.9', title: 'Rational Functions and Vertical Asymptotes' },
       { id: '1.10', title: 'Rational Functions and Holes' },
       { id: '1.11', title: 'Equivalent Representations of Polynomial and Rational Expressions' },
-      { id: '1.12', title: 'Function Composition' },
-      { id: '1.13', title: 'Inverse Functions' },
-      { id: '1.14', title: 'Logarithmic Expressions' },
-      { id: '1.15', title: 'Logarithmic Functions' },
-      { id: '1.16', title: 'Logarithmic Properties' },
+      { id: '1.12', title: 'Transformations of Functions' },
+      { id: '1.13', title: 'Function Model Selection and Assumption Articulation' },
+      { id: '1.14', title: 'Function Model Construction and Application' },
+      { id: 'Unit 1 REVIEW', title: 'Unit 1 REVIEW' },
     ],
-    2: [
-      { id: '2.1', title: 'Change in Arithmetic & Geometric Sequences' },
-      { id: '2.2', title: 'Exponential Functions' },
-      { id: '2.3', title: 'Exponential Function Estimation' },
-      { id: '2.4', title: 'Exponential & Logarithmic Equations' },
-      { id: '2.5', title: 'Exponential Context & Modeling' },
-      { id: '2.6', title: 'Logarithmic Context & Modeling' },
-      { id: '2.7', title: 'Semi-log Plots' },
+    '2A': [
+      { id: '2.1', title: 'Change in Arithmetic and Geometric Sequences' },
+      { id: '2.2', title: 'Change in Linear and Exponential Functions' },
+      { id: '2.3', title: 'Exponential Functions' },
+      { id: '2.4', title: 'Exponential Function Manipulation' },
+      { id: '2.5A', title: 'Exponential Function Context and Data Modeling' },
+      { id: '2.5B', title: 'Exponential Function Context and Data Modeling' },
+      { id: '2.6', title: 'Competing Function Model Validation' },
+      { id: '2.7A', title: 'Composition of Functions' },
+      { id: '2.7B', title: 'Composition of Functions' },
+      { id: '2.8', title: 'Inverse Functions' },
+      { id: 'Unit 2A REVIEW', title: 'Unit 2A REVIEW' },
     ],
-    3: [
+    '2B': [
+      { id: '2.9', title: 'Logarithmic Expressions' },
+      { id: '2.10', title: 'Inverses of Exponential Functions' },
+      { id: '2.11', title: 'Logarithmic Functions' },
+      { id: '2.12', title: 'Logarithmic Function Manipulation' },
+      { id: '2.13A', title: 'Exponential and Logarithmic Equations and Inequalities' },
+      { id: '2.13B', title: 'Exponential and Logarithmic Equations and Inequalities' },
+      { id: '2.14', title: 'Logarithmic Function Context and Data Modeling' },
+      { id: '2.15', title: 'Semi-log Plots' },
+      { id: 'Unit 2B REVIEW', title: 'Unit 2B REVIEW' },
+    ],
+    '3': [
       { id: '3.1', title: 'Periodic Phenomena' },
       { id: '3.2', title: 'Sine, Cosine, and Tangent' },
       { id: '3.3', title: 'Sine and Cosine Function Values' },
       { id: '3.4', title: 'Sine and Cosine Function Graphs' },
       { id: '3.5', title: 'Sinusoidal Functions' },
       { id: '3.6', title: 'Sinusoidal Function Transformations' },
-      { id: '3.7', title: 'Sinusoidal Function Context and Modeling' },
+      { id: '3.7', title: 'Sinusoidal Function Context and Data Modeling' },
       { id: '3.8', title: 'The Tangent Function' },
       { id: '3.9', title: 'Inverse Trigonometric Functions' },
       { id: '3.10', title: 'Trigonometric Equations and Inequalities' },
-      { id: '3.11', title: 'Secant, Cosecant, Cotangent, & Polar Functions' },
+      { id: '3.11', title: 'The Secant, Cosecant, and Cotangent Functions' },
+      { id: '3.12', title: 'Equivalent Representations of Trigonometric Functions' },
+      { id: '3.13', title: 'Trigonometry and Polar Coordinates' },
+      { id: '3.14', title: 'Polar Function Graphs' },
+      { id: '3.15', title: 'Rates of Change in Polar Functions' },
+      { id: 'Unit 3 REVIEW', title: 'Unit 3 REVIEW' },
     ],
-    4: [
-      { id: '4.1', title: 'Parametric Equations' },
-      { id: '4.2', title: 'Parametric Equations for Linear & Cyclical Motion' },
-      { id: '4.3', title: 'Parametric Functions and Conic Sections' },
-      { id: '4.4', title: 'Implicitly Defined Functions' },
-      { id: '4.5', title: 'Vector Fundamentals' },
-      { id: '4.6', title: 'Vector Operations' },
-      { id: '4.7', title: 'Vector-Valued Functions' },
-      { id: '4.8', title: 'Matrices and Systems of Equations' },
-      { id: '4.9', title: 'Matrix Operations' },
-      { id: '4.10', title: 'Matrices as Linear Transformations' },
+    '4A': [
+      { id: '4.1', title: 'Parametric Functions' },
+      { id: '4.2', title: 'Parametric Functions Modeling Planar Motion' },
+      { id: '4.3', title: 'Parametric Functions and Rates of Change' },
+      { id: '4.4', title: 'Parametrically Defined Circles and Lines' },
+      { id: '4.5', title: 'Implicitly Defined Functions' },
+      { id: '4.6A', title: 'Conic Sections - Parabolas' },
+      { id: '4.6B', title: 'Conic Sections - Ellipses' },
+      { id: '4.6C', title: 'Conic Sections - Hyperbolas' },
+      { id: '4.7', title: 'Parametrization of Implicitly Defined Functions' },
+      { id: 'Unit 4A REVIEW', title: 'Unit 4A REVIEW' },
+    ],
+    '4B': [
+      { id: '4.8A', title: 'Vectors' },
+      { id: '4.8B', title: 'Vectors' },
+      { id: '4.9', title: 'Vector-Valued Functions' },
+      { id: '4.10', title: 'Matrices' },
+      { id: '4.11', title: 'The Inverse and Determinant of a Matrix' },
+      { id: '4.12', title: 'Linear Transformations and Matrices' },
+      { id: '4.13A', title: 'Matrices as Functions' },
+      { id: '4.13B', title: 'Matrices as Functions' },
+      { id: '4.14', title: 'Matrices Modeling Contexts' },
+      { id: 'Unit 4B REVIEW', title: 'Unit 4B REVIEW' },
     ],
   };
 
-  const TOTAL_SYLLABUS_TOPICS =
-    AP_CURRICULUM_REGISTRY[1].length +
-    AP_CURRICULUM_REGISTRY[2].length +
-    AP_CURRICULUM_REGISTRY[3].length +
-    AP_CURRICULUM_REGISTRY[4].length; // 44
+  const UNIT_SECTION_KEYS = ['1', '2A', '2B', '3', '4A', '4B'];
+  const TOTAL_SYLLABUS_TOPICS = UNIT_SECTION_KEYS.reduce(
+    (sum, k) => sum + (AP_CURRICULUM_REGISTRY[k] ? AP_CURRICULUM_REGISTRY[k].length : 0),
+    0
+  ); // 71
 
   // State
-  let activeUnit = 1;
+  let activeUnit = '1';
   let activeTopicCode = '1.1';
   let activeTopicTitle = 'Change in Tandem';
   let activeTopicDocId = 'topic_1_1';
@@ -97,23 +128,72 @@ Enforce this strict, simplified 3-part content schema for every single topic (NO
   const vaultKnowledgeCache = new Map();
   const VAULT_UNIT_NAMES = {
     unit_1: 'Unit 1: Polynomial & Rational Functions',
-    unit_2: 'Unit 2: Exponential & Logarithmic Functions',
+    unit_2: 'Unit 2 (2A & 2B): Exponential & Logarithmic Functions',
     unit_3: 'Unit 3: Trigonometric & Polar Functions',
-    unit_4: 'Unit 4: Parameters, Vectors, Matrices',
+    unit_4: 'Unit 4 (4A & 4B): Parameters, Vectors, Matrices',
     unit_frq: 'FRQ: Free Response Question Bank & Guidelines',
   };
 
   function formatUnitId(unit) {
-    if (typeof unit === 'string' && unit.startsWith('unit_')) return unit;
-    return `unit_${unit}`;
+    const str = String(unit || '1').trim();
+    if (str === 'unit_frq') return 'unit_frq';
+    if (str.startsWith('unit_2')) return 'unit_2';
+    if (str.startsWith('unit_4')) return 'unit_4';
+    if (str.startsWith('unit_')) return str;
+    if (str.startsWith('2')) return 'unit_2';
+    if (str.startsWith('4')) return 'unit_4';
+    return `unit_${str}`;
   }
 
   function formatTopicDocId(topicCode) {
-    return 'topic_' + String(topicCode).replace(/[^0-9]/g, '_');
+    return 'topic_' + String(topicCode).replace(/[^0-9A-Za-z]/g, '_');
   }
 
+  const READ_QUOTA_KEY = 'mathprep_firestore_read_quota_exhausted';
+  const WRITE_QUOTA_KEY = 'mathprep_firestore_write_quota_exhausted';
+
+  function isQuotaError(err) {
+    const msg = String(err?.message || err?.code || err || '').toLowerCase();
+    return msg.includes('quota') || msg.includes('resource-exhausted') || msg.includes('resource_exhausted');
+  }
+
+  function isReadQuotaExhausted() {
+    try {
+      return sessionStorage.getItem(READ_QUOTA_KEY) === '1';
+    } catch (_) {
+      return false;
+    }
+  }
+
+  function isWriteQuotaExhausted() {
+    try {
+      return sessionStorage.getItem(WRITE_QUOTA_KEY) === '1';
+    } catch (_) {
+      return false;
+    }
+  }
+
+  function markReadQuotaExhausted() {
+    try {
+      sessionStorage.setItem(READ_QUOTA_KEY, '1');
+    } catch (_) {}
+  }
+
+  function markWriteQuotaExhausted() {
+    try {
+      sessionStorage.setItem(WRITE_QUOTA_KEY, '1');
+    } catch (_) {}
+  }
+
+  let firestoreSilentConfigured = false;
   function getFirestoreDb() {
     if (typeof firebase !== 'undefined' && firebase.apps && firebase.apps.length) {
+      try {
+        if (!firestoreSilentConfigured && typeof firebase.firestore?.setLogLevel === 'function') {
+          firebase.firestore.setLogLevel('silent');
+          firestoreSilentConfigured = true;
+        }
+      } catch (_) {}
       try {
         const dbId = window.firebaseConfig?.firestoreDatabaseId;
         return dbId ? firebase.app().firestore(dbId) : firebase.firestore();
@@ -490,7 +570,7 @@ Enforce this strict, simplified 3-part content schema for every single topic (NO
 
     const db = getFirestoreDb();
 
-    if (db) {
+    if (db && !isReadQuotaExhausted()) {
       try {
         const snap = await db.collection('raw_knowledge').doc(unitId).get();
         if (snap.exists) {
@@ -501,7 +581,9 @@ Enforce this strict, simplified 3-part content schema for every single topic (NO
           }
         }
       } catch (e) {
-        console.warn('Could not fetch raw knowledge for', unitId, e);
+        if (isQuotaError(e)) {
+          markReadQuotaExhausted();
+        }
       }
     }
 
@@ -523,9 +605,6 @@ Enforce this strict, simplified 3-part content schema for every single topic (NO
             updatedBy: ADMIN_EMAIL,
           };
           vaultKnowledgeCache.set(unitId, payload);
-          if (isAuthorizedAdmin() && db) {
-            db.collection('raw_knowledge').doc(unitId).set(payload, { merge: true }).catch(() => {});
-          }
           return text;
         }
       }
@@ -637,13 +716,15 @@ Enforce this strict, simplified 3-part content schema for every single topic (NO
       // Append summary & interactive Batch Proposal Card in Teacher Limmy Chat
       const summaryMarkdown =
         `🎓 **Full Pre-Made AP Precalculus Curriculum Generated & Staged!**\n\n` +
-        `I have synthesized the complete, College Board–aligned curriculum across **all 4 Units (${stagedBatchMap.size} Topics)** grounded in your Raw Knowledge Vault:\n` +
-        `- **Unit 1 (Topics 1.1–1.16):** 16 Polynomial, Rational, Inverse & Log Function modules\n` +
-        `- **Unit 2 (Topics 2.1–2.7):** 7 Sequences, Exponential/Log Modeling & Semi-log Plot modules\n` +
-        `- **Unit 3 (Topics 3.1–3.11):** 11 Trigonometric, Sinusoidal, Inverse Trig & Polar modules\n` +
-        `- **Unit 4 (Topics 4.1–4.10):** 10 Parametric, Conic, Vector & Matrix Transformation modules\n\n` +
+        `I have synthesized the complete, College Board–aligned curriculum across **all 6 Unit Sections (${stagedBatchMap.size} Topics)** grounded in your Raw Knowledge Vault:\n` +
+        `- **Unit 1 (Topics 1.1–1.14 + Review):** 15 Polynomial & Rational Function modules\n` +
+        `- **Unit 2A (Topics 2.1–2.8 + Review):** 11 Exponential, Composition & Inverse Function modules\n` +
+        `- **Unit 2B (Topics 2.9–2.15 + Review):** 9 Logarithmic Function & Semi-log Plot modules\n` +
+        `- **Unit 3 (Topics 3.1–3.15 + Review):** 16 Trigonometric, Sinusoidal & Polar modules\n` +
+        `- **Unit 4A (Topics 4.1–4.7 + Review):** 10 Parametric, Implicit & Conic Section modules\n` +
+        `- **Unit 4B (Topics 4.8A–4.14 + Review):** 10 Vector & Matrix Transformation modules\n\n` +
         `**Total Staged Assets:** **${stagedBatchMap.size} Master Lessons**, **${totalFormulas} Essential LaTeX Formulas**, **${totalMcq} AP MCQs** (with calculator flags & exam traps), and **${totalFrq} Multi-Part AP FRQs** (with official scoring rubrics).\n\n` +
-        `Switch between any Unit/Topic above and click the **Master Lesson**, **Formula Sheet**, **Practice: MCQ**, and **Practice: FRQ** tabs on the right to inspect any topic, or click **Accept & Batch Publish All 44 Topics to Firestore** below!`;
+        `Switch between any Unit/Topic above and click the **Master Lesson**, **Formula Sheet**, **Practice: MCQ**, and **Practice: FRQ** tabs on the right to inspect any topic, or click **Accept & Batch Publish All ${stagedBatchMap.size} Topics to Firestore** below!`;
 
       appendBatchProposalMessage(summaryMarkdown, {
         totalTopics: stagedBatchMap.size,
@@ -748,7 +829,9 @@ Enforce this strict, simplified 3-part content schema for every single topic (NO
         count++;
       });
 
-      await batch.commit();
+      if (!isWriteQuotaExhausted()) {
+        await batch.commit();
+      }
 
       if (stagedBatchMap.has(activeTopicCode)) {
         liveTopicContent = {
@@ -771,20 +854,25 @@ Enforce this strict, simplified 3-part content schema for every single topic (NO
 
       appendChatMessage(
         'assistant',
-        `✅ **All ${count} AP Precalculus Topics Published Live to Cloud Firestore!**\n\nEvery sub-unit across **Units 1–4** now has its Dedicated Formula Sheet, Master Lesson, AP Multiple-Choice Questions, and Multi-Part Free-Response Questions live in \`curriculum/{topicId}\`.`
+        `✅ **All ${count} AP Precalculus Topics Published Live!**\n\nEvery sub-unit across **Units 1–4B** now has its Dedicated Formula Sheet, Master Lesson, AP Multiple-Choice Questions, and Multi-Part Free-Response Questions live.`
       );
-      notify(`Successfully published all ${count} AP Precalculus topics to Firestore!`, 'success');
+      notify(`Successfully published all ${count} AP Precalculus topics!`, 'success');
     } catch (err) {
-      console.error('Error batch publishing curriculum:', err);
-      notify(`Failed to batch publish curriculum: ${err.message || err}`, 'error');
+      if (isQuotaError(err)) {
+        markWriteQuotaExhausted();
+        notify('Saved locally! (Firestore daily free write quota reached; local curriculum bundle is active.)', 'info');
+      } else {
+        console.error('Error batch publishing curriculum:', err);
+        notify(`Failed to batch publish curriculum: ${err.message || err}`, 'error');
+      }
     } finally {
       if (pubBtn) {
         pubBtn.disabled = false;
-        pubBtn.innerHTML = `<span>✅ Publish All 44 Staged Topics to Firestore</span>`;
+        pubBtn.innerHTML = `<span>✅ Publish All ${TOTAL_SYLLABUS_TOPICS} Staged Topics to Firestore</span>`;
       }
       if (cardPubBtn) {
         cardPubBtn.disabled = false;
-        cardPubBtn.innerHTML = `<span>✅ Accept & Batch Publish All 44 Topics to Firestore</span>`;
+        cardPubBtn.innerHTML = `<span>✅ Accept & Batch Publish All ${TOTAL_SYLLABUS_TOPICS} Topics to Firestore</span>`;
       }
     }
   };
@@ -948,7 +1036,7 @@ Enforce this strict, simplified 3-part content schema for every single topic (NO
 
     if (!forceReload && vaultKnowledgeCache.has(unitId)) {
       data = vaultKnowledgeCache.get(unitId);
-    } else if (db) {
+    } else if (db && !isReadQuotaExhausted()) {
       try {
         const snap = await db.collection('raw_knowledge').doc(unitId).get();
         if (snap.exists) {
@@ -959,7 +1047,9 @@ Enforce this strict, simplified 3-part content schema for every single topic (NO
           }
         }
       } catch (err) {
-        console.warn('Error loading vault content from Firestore:', err);
+        if (isQuotaError(err)) {
+          markReadQuotaExhausted();
+        }
       }
     }
 
@@ -982,10 +1072,6 @@ Enforce this strict, simplified 3-part content schema for every single topic (NO
               updatedBy: ADMIN_EMAIL,
             };
             vaultKnowledgeCache.set(unitId, data);
-
-            if (isAuthorizedAdmin() && db) {
-              db.collection('raw_knowledge').doc(unitId).set(data, { merge: true }).catch(() => {});
-            }
           }
         }
       } catch (e) {
@@ -1079,16 +1165,23 @@ Enforce this strict, simplified 3-part content schema for every single topic (NO
         }
       }
 
-      await batch.commit();
+      if (!isWriteQuotaExhausted()) {
+        await batch.commit();
+      }
 
       loadVaultContent(activeVaultUnit);
       updateGroundingIndicator(activeUnit);
 
       if (!silent) {
-        notify(`Successfully stored all 5 unit notebooks (${totalSyncedChars.toLocaleString()} chars) into Firebase Firestore!`, 'success');
+        notify(`Successfully stored all 5 unit notebooks (${totalSyncedChars.toLocaleString()} chars)!`, 'success');
       }
       return true;
     } catch (err) {
+      if (isQuotaError(err)) {
+        markWriteQuotaExhausted();
+        if (!silent) notify('Raw notes cached locally (Firestore daily free write quota reached).', 'info');
+        return true;
+      }
       console.error('Error syncing seed notes to Firestore:', err);
       if (!silent) notify(`Failed to sync notes: ${err.message || err}`, 'error');
       return false;
@@ -1140,14 +1233,21 @@ Enforce this strict, simplified 3-part content schema for every single topic (NO
         updatedBy: ADMIN_EMAIL,
       };
 
-      await db.collection('raw_knowledge').doc(activeVaultUnit).set(payload, { merge: true });
       vaultKnowledgeCache.set(activeVaultUnit, payload);
+      if (!isWriteQuotaExhausted()) {
+        await db.collection('raw_knowledge').doc(activeVaultUnit).set(payload, { merge: true });
+      }
 
-      notify(`Saved raw knowledge for ${unitTitle} (${chars.toLocaleString()} chars) to Firestore!`, 'success');
+      notify(`Saved raw knowledge for ${unitTitle} (${chars.toLocaleString()} chars)!`, 'success');
       loadVaultContent(activeVaultUnit);
     } catch (err) {
-      console.error('Error saving raw knowledge:', err);
-      notify(`Failed to save raw knowledge: ${err.message || err}`, 'error');
+      if (isQuotaError(err)) {
+        markWriteQuotaExhausted();
+        notify('Saved in local session cache (Firestore daily free write quota reached).', 'info');
+      } else {
+        console.error('Error saving raw knowledge:', err);
+        notify(`Failed to save raw knowledge: ${err.message || err}`, 'error');
+      }
     } finally {
       if (saveBtn) {
         saveBtn.disabled = false;
@@ -1168,11 +1268,6 @@ Enforce this strict, simplified 3-part content schema for every single topic (NO
       return false;
     }
 
-    if (!silent) {
-      const confirmDelete = window.confirm('Are you sure you want to delete ALL raw notes from Firestore across all units? This cannot be undone.');
-      if (!confirmDelete) return false;
-    }
-
     const deleteBtn = document.getElementById('vault-delete-all-btn');
     if (deleteBtn) {
       deleteBtn.disabled = true;
@@ -1180,22 +1275,26 @@ Enforce this strict, simplified 3-part content schema for every single topic (NO
     }
 
     try {
-      const batch = db.batch();
-      try {
-        const snap = await db.collection('raw_knowledge').get();
-        snap.forEach((doc) => {
-          batch.delete(doc.ref);
+      if (!isWriteQuotaExhausted()) {
+        const batch = db.batch();
+        if (!isReadQuotaExhausted()) {
+          try {
+            const snap = await db.collection('raw_knowledge').get();
+            snap.forEach((doc) => {
+              batch.delete(doc.ref);
+            });
+          } catch (err) {
+            if (isQuotaError(err)) markReadQuotaExhausted();
+          }
+        }
+
+        const knownKeys = ['unit_1', 'unit_2', 'unit_3', 'unit_4', 'unit_frq'];
+        knownKeys.forEach((key) => {
+          batch.delete(db.collection('raw_knowledge').doc(key));
         });
-      } catch (err) {
-        console.warn('Note on collection scan:', err);
+
+        await batch.commit();
       }
-
-      const knownKeys = ['unit_1', 'unit_2', 'unit_3', 'unit_4', 'unit_frq'];
-      knownKeys.forEach((key) => {
-        batch.delete(db.collection('raw_knowledge').doc(key));
-      });
-
-      await batch.commit();
       vaultKnowledgeCache.clear();
 
       const textarea = document.getElementById('vault-raw-text');
@@ -1260,89 +1359,15 @@ Enforce this strict, simplified 3-part content schema for every single topic (NO
     reader.readAsText(file);
   }
 
-  // Initialize & Populate All 44 Official Topics in Firestore
+  // Verify All 71 Official Topics from local pre-made bundle without automatic Firestore batch writes on startup
   async function initializeSkeletalCurriculum() {
-    const db = getFirestoreDb();
-    if (!db) return;
-
     const statsBadge = document.getElementById('teacher-limmy-stats-badge');
-    if (statsBadge) statsBadge.textContent = 'Checking 44 Topics...';
-
-    try {
-      const snapshot = await db.collection('curriculum').get();
-      const existingMap = new Map();
-      snapshot.forEach((doc) => {
-        existingMap.set(doc.id, doc.data());
-      });
-
-      let bundleTopicsMap = new Map();
-      try {
-        const bundle = await fetchPremadeCurriculumBundle();
-        (bundle.topics || []).forEach((t) => {
-          bundleTopicsMap.set(String(t.topic_id), t);
-        });
-      } catch (e) {
-        console.warn('Could not load premade bundle during init:', e);
-      }
-
-      let populatedCount = 0;
-      const batch = db.batch();
-      let batchCount = 0;
-      const canWrite = isAuthorizedAdmin();
-
-      for (let unitNum = 1; unitNum <= 4; unitNum++) {
-        const topics = AP_CURRICULUM_REGISTRY[unitNum] || [];
-        for (const topic of topics) {
-          const docId = formatTopicDocId(topic.id);
-          const existingData = existingMap.get(docId);
-          const existingMcqLen = existingData?.practice_section?.mcq?.length || 0;
-          const existingFrqLen = existingData?.practice_section?.frq?.length || 0;
-          const alreadyPopulated =
-            existingData &&
-            hasPopulatedContent(existingData) &&
-            existingMcqLen >= 15 &&
-            existingFrqLen >= 3;
-
-          if (alreadyPopulated) {
-            populatedCount++;
-          } else if (bundleTopicsMap.has(topic.id)) {
-            const premadeRaw = bundleTopicsMap.get(topic.id);
-            const norm = normalizeCurriculumPayload(premadeRaw, unitNum, topic.id, topic.title);
-            if (canWrite && norm) {
-              const docRef = db.collection('curriculum').doc(docId);
-              batch.set(
-                docRef,
-                {
-                  ...norm,
-                  topicId: docId,
-                  status: 'published',
-                  lastUpdated: new Date().toISOString(),
-                  publishedBy: ADMIN_EMAIL,
-                },
-                { merge: true }
-              );
-              batchCount++;
-              populatedCount++;
-            }
-          }
-        }
-      }
-
-      if (batchCount > 0 && canWrite) {
-        await batch.commit();
-        console.info(`[Firestore] Populated ${batchCount} AP Precalculus topics with full Question Bank sets into curriculum collection.`);
-      }
-
-      if (statsBadge) {
-        statsBadge.textContent = `4 Units · ${TOTAL_SYLLABUS_TOPICS} Topics (${populatedCount || TOTAL_SYLLABUS_TOPICS} Populated)`;
-      }
-    } catch (err) {
-      console.warn('Curriculum initialization check note:', err);
-      if (statsBadge) statsBadge.textContent = `4 Units · ${TOTAL_SYLLABUS_TOPICS} Topics`;
+    if (statsBadge) {
+      statsBadge.textContent = `6 Unit Sections · ${TOTAL_SYLLABUS_TOPICS} Topics (${TOTAL_SYLLABUS_TOPICS} Populated)`;
     }
   }
 
-  // Load topic content from Firestore (merged with premade Question Bank items so all 15 MCQs & 3 FRQs are always present)
+  // Load topic content from Firestore (merged with premade Question Bank items so all MCQs & FRQs are always present)
   async function loadActiveTopicData() {
     const db = getFirestoreDb();
     activeTopicDocId = formatTopicDocId(activeTopicCode);
@@ -1356,7 +1381,10 @@ Enforce this strict, simplified 3-part content schema for every single topic (NO
     }
 
     const titleEl = document.getElementById('preview-topic-title');
-    if (titleEl) titleEl.textContent = `Unit ${activeUnit} · Topic ${activeTopicCode}: ${activeTopicTitle}`;
+    const topicDisplayLabel = String(activeTopicCode).includes('REVIEW')
+      ? activeTopicCode
+      : `Topic ${activeTopicCode}: ${activeTopicTitle}`;
+    if (titleEl) titleEl.textContent = `Unit ${activeUnit} · ${topicDisplayLabel}`;
 
     let premadeNormalized = null;
     try {
@@ -1370,7 +1398,7 @@ Enforce this strict, simplified 3-part content schema for every single topic (NO
     }
 
     let loadedFromFirestore = null;
-    if (db) {
+    if (db && !isReadQuotaExhausted()) {
       try {
         const docSnap = await db.collection('curriculum').doc(activeTopicDocId).get();
         if (docSnap.exists) {
@@ -1380,7 +1408,9 @@ Enforce this strict, simplified 3-part content schema for every single topic (NO
           }
         }
       } catch (err) {
-        console.warn('Error reading active topic from Firestore:', err);
+        if (isQuotaError(err)) {
+          markReadQuotaExhausted();
+        }
       }
     }
 
@@ -1422,17 +1452,18 @@ Enforce this strict, simplified 3-part content schema for every single topic (NO
     updateGroundingIndicator(activeUnit);
   }
 
-  function populateTopicDropdown(unitNum) {
+  function populateTopicDropdown(unitKey) {
     const topicSelect = document.getElementById('teacher-limmy-topic-select');
     if (!topicSelect) return;
 
     topicSelect.innerHTML = '';
-    const topics = AP_CURRICULUM_REGISTRY[unitNum] || [];
+    const key = String(unitKey || '1');
+    const topics = AP_CURRICULUM_REGISTRY[key] || AP_CURRICULUM_REGISTRY['1'] || [];
 
     topics.forEach((t) => {
       const opt = document.createElement('option');
       opt.value = t.id;
-      opt.textContent = `Topic ${t.id}: ${t.title}`;
+      opt.textContent = String(t.id).includes('REVIEW') ? t.id : `Topic ${t.id}: ${t.title}`;
       if (t.id === activeTopicCode) opt.selected = true;
       topicSelect.appendChild(opt);
     });
@@ -2193,7 +2224,9 @@ Enforce this strict, simplified 3-part content schema for every single topic (NO
         publishedBy: ADMIN_EMAIL,
       };
 
-      await db.collection('curriculum').doc(activeTopicDocId).set(publishPayload, { merge: true });
+      if (!isWriteQuotaExhausted()) {
+        await db.collection('curriculum').doc(activeTopicDocId).set(publishPayload, { merge: true });
+      }
 
       liveTopicContent = publishPayload;
       stagedBatchMap.delete(activeTopicCode);
@@ -2210,14 +2243,19 @@ Enforce this strict, simplified 3-part content schema for every single topic (NO
       notify(`Topic ${activeTopicCode} published live! Students can now see this lesson, formula sheet, MCQs, and FRQs.`, 'success');
       appendChatMessage(
         'assistant',
-        `✅ **Topic ${activeTopicCode} (${activeTopicTitle})** has been published to Cloud Firestore (\`curriculum/${activeTopicDocId}\`)!`
+        `✅ **Topic ${activeTopicCode} (${activeTopicTitle})** has been published!`
       );
 
       renderRightPanelPreview();
       initializeSkeletalCurriculum();
     } catch (err) {
-      console.error('Error publishing to Firestore:', err);
-      notify(`Failed to publish: ${err.message || err}`, 'error');
+      if (isQuotaError(err)) {
+        markWriteQuotaExhausted();
+        notify(`Saved Topic ${activeTopicCode} in active session (Firestore daily free write quota reached).`, 'info');
+      } else {
+        console.error('Error publishing to Firestore:', err);
+        notify(`Failed to publish: ${err.message || err}`, 'error');
+      }
     }
   };
 
@@ -2231,7 +2269,7 @@ Enforce this strict, simplified 3-part content schema for every single topic (NO
       pubBtn.classList.add('hidden');
       pubBtn.classList.remove('flex');
     }
-    notify('Proposal discarded. Preview reverted to current Firestore state.', 'info');
+    notify('Proposal discarded. Preview reverted to current state.', 'info');
     appendChatMessage('assistant', 'Staged proposal discarded. What would you like to refine, expand, or draft next?');
     renderRightPanelPreview();
   };
@@ -2244,7 +2282,7 @@ Enforce this strict, simplified 3-part content schema for every single topic (NO
 
     if (unitSelect) {
       unitSelect.addEventListener('change', (e) => {
-        activeUnit = Number(e.target.value) || 1;
+        activeUnit = String(e.target.value || '1');
         populateTopicDropdown(activeUnit);
         const firstTopic = (AP_CURRICULUM_REGISTRY[activeUnit] || [])[0];
         if (firstTopic) {
@@ -2260,7 +2298,7 @@ Enforce this strict, simplified 3-part content schema for every single topic (NO
         activeTopicCode = e.target.value;
         const currentList = AP_CURRICULUM_REGISTRY[activeUnit] || [];
         const found = currentList.find((t) => t.id === activeTopicCode);
-        activeTopicTitle = found ? found.title : `Topic ${activeTopicCode}`;
+        activeTopicTitle = found ? found.title : `${activeTopicCode}`;
         loadActiveTopicData();
       });
     }
@@ -2368,31 +2406,21 @@ Enforce this strict, simplified 3-part content schema for every single topic (NO
     }
 
     // Initial population
-    populateTopicDropdown(1);
+    populateTopicDropdown('1');
     loadActiveTopicData();
     initializeSkeletalCurriculum();
     loadVaultContent(activeVaultUnit);
-    executeAutoSyncIfPending();
 
     setTimeout(() => {
       appendChatMessage(
         'assistant',
-        `👋 Welcome to **Teacher Limmy Admin Studio**!\n\nClick **"📚 Generate Full Pre-Made Curriculum (All Topics: Lessons, Formulas, MCQ, & FRQ)"** at the top to stage all **44 College Board AP Precalculus topics** across Units 1–4 at once, or select any individual sub-unit above to customize its Master Lesson, Formula Sheet, MCQs, and Multi-Part FRQs!`
+        `👋 Welcome to **Teacher Limmy Admin Studio**!\n\nClick **"📚 Generate Full Pre-Made Curriculum (All Topics: Lessons, Formulas, MCQ, & FRQ)"** at the top to stage all **71 AP Precalculus topics** across Units 1, 2A, 2B, 3, 4A, and 4B at once, or select any individual sub-unit above to customize its Master Lesson, Formula Sheet, MCQs, and Multi-Part FRQs!`
       );
     }, 400);
   }
 
   function executeAutoSyncIfPending() {
-    if (isAuthorizedAdmin()) {
-      if (!sessionStorage.getItem('mathprep_raw_notes_synced_v2')) {
-        sessionStorage.setItem('mathprep_raw_notes_synced_v2', 'true');
-        window.syncAllRawNotesToFirestore(true).then((synced) => {
-          if (synced) {
-            console.log('Firebase: All 5 unit raw knowledge notebooks saved to Firestore.');
-          }
-        });
-      }
-    }
+    // Disabled automatic background Firestore writes on startup to preserve free-tier daily write quota
   }
 
   if (document.readyState === 'loading') {

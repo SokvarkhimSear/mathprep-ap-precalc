@@ -2,8 +2,14 @@
 
 import React, { useState } from 'react';
 import { useAuth } from '@/src/context/AuthContext';
-import { db, handleFirestoreError, OperationType } from '@/src/firebase';
-import { collection, addDoc } from 'firebase/firestore';
+import {
+  db,
+  isQuotaError,
+  isReadQuotaExhausted,
+  isWriteQuotaExhausted,
+  markWriteQuotaExhausted,
+} from '@/src/firebase';
+import { doc, setDoc } from 'firebase/firestore';
 import { sendPaymentTelegramNotification } from '../actions/telegram';
 
 export default function CheckoutPage() {
@@ -33,8 +39,9 @@ export default function CheckoutPage() {
     setSubmitting(true);
 
     try {
-      // 1. Save payment claim record to Firestore collection 'payment_submissions'
+      const newSubId = `sub_${Date.now()}`;
       const submissionData = {
+        id: newSubId,
         user_id: currentUser.uid,
         user_email: targetEmail,
         status: 'pending',
@@ -42,19 +49,32 @@ export default function CheckoutPage() {
         created_at: new Date().toISOString(),
       };
 
-      let newSubId = '';
+      // 1. Always save locally first so Admin Console sees it immediately even if Firestore daily quota is exhausted
       try {
-        const docRef = await addDoc(collection(db, 'payment_submissions'), submissionData);
-        newSubId = docRef.id;
-        setSubmissionId(newSubId);
-      } catch (fsErr) {
-        handleFirestoreError(fsErr, OperationType.CREATE, 'payment_submissions');
+        const prevSubs = JSON.parse(localStorage.getItem('mathprep_local_payment_submissions') || '[]');
+        prevSubs.unshift(submissionData);
+        localStorage.setItem('mathprep_local_payment_submissions', JSON.stringify(prevSubs.slice(0, 100)));
+      } catch (_e) {}
+
+      // 2. Save payment claim record to Firestore collection 'payment_submissions' if write quota is available
+      if (!isWriteQuotaExhausted() && !isReadQuotaExhausted()) {
+        try {
+          await Promise.race([
+            setDoc(doc(db, 'payment_submissions', newSubId), submissionData),
+            new Promise((_, reject) => setTimeout(() => reject(new Error('quota-timeout')), 2500)),
+          ]);
+        } catch (fsErr) {
+          if (isQuotaError(fsErr) || String(fsErr?.message || '').includes('quota-timeout')) {
+            markWriteQuotaExhausted();
+          }
+        }
       }
 
-      // 2. Trigger Telegram sendMessage text alert to store owner
+      setSubmissionId(newSubId);
+
+      // 3. Trigger Telegram sendMessage text alert to store owner
       try {
-        console.log('[Checkout Page] Triggering Telegram text notification via /api/send-telegram...');
-        const apiRes = await fetch('/api/send-telegram', {
+        await fetch('/api/send-telegram', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -64,23 +84,19 @@ export default function CheckoutPage() {
             amount: '$10.00',
           }),
         });
-        const apiData = await apiRes.json();
-        console.log('[Checkout Page] /api/send-telegram result:', JSON.stringify(apiData, null, 2));
 
-        const notifResult = await sendPaymentTelegramNotification({
+        await sendPaymentTelegramNotification({
           submissionId: newSubId,
           userEmail: targetEmail,
           userId: currentUser.uid,
           amount: '$10.00',
         });
-        console.log('[Checkout Page] Direct action result:', JSON.stringify(notifResult, null, 2));
-      } catch (telegramErr) {
-        console.error('[Checkout Page] Telegram notification exception:', telegramErr);
+      } catch (_telegramErr) {
+        // Non-blocking if Telegram webhook is unreachable
       }
 
       setSubmitted(true);
     } catch (err) {
-      console.error('Payment submission error:', err);
       setError(err?.message || 'Failed to submit payment claim. Please try again.');
     } finally {
       setSubmitting(false);
@@ -100,7 +116,7 @@ export default function CheckoutPage() {
               </span>
             </div>
             <p className="text-[11px] sm:text-xs text-blue-200/90 leading-snug">
-              Unlock all 4 AP Precalculus Units & Unlimited AI Tutoring
+              Unlock all 6 AP Precalculus Units (71 Topics) & Unlimited AI Tutoring
             </p>
           </div>
           <div className="self-start sm:self-center bg-amber-400 text-slate-950 text-[10px] sm:text-xs font-black px-2.5 py-1 rounded-md tracking-wider uppercase shadow-xs">

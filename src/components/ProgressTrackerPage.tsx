@@ -71,40 +71,69 @@ interface ProgressTrackerPageProps {
 
 const UNIT_HEADERS: Array<{
   unit_id: string;
-  num: number;
+  num: string;
   title: string;
   weight: string;
   accent: string;
 }> = [
   {
     unit_id: 'unit_1',
-    num: 1,
-    title: 'Unit 1: Polynomial and Rational Functions',
+    num: '1',
+    title: 'Unit 1 - Polynomial and Rational Functions',
     weight: '30%–40% Exam Weight',
     accent: 'from-blue-600 to-indigo-700',
   },
   {
-    unit_id: 'unit_2',
-    num: 2,
-    title: 'Unit 2: Exponential and Logarithmic Functions',
-    weight: '27%–40% Exam Weight',
+    unit_id: 'unit_2a',
+    num: '2A',
+    title: 'Unit 2A - Exponential and Logarithmic Functions',
+    weight: '27%–40% Exam Weight (Part A)',
     accent: 'from-emerald-600 to-teal-700',
   },
   {
+    unit_id: 'unit_2b',
+    num: '2B',
+    title: 'Unit 2B - Exponential and Logarithmic Functions',
+    weight: '27%–40% Exam Weight (Part B)',
+    accent: 'from-teal-600 to-cyan-700',
+  },
+  {
     unit_id: 'unit_3',
-    num: 3,
-    title: 'Unit 3: Trigonometric and Polar Functions',
+    num: '3',
+    title: 'Unit 3 - Trigonometric and Polar Functions',
     weight: '30%–35% Exam Weight',
     accent: 'from-purple-600 to-indigo-700',
   },
   {
-    unit_id: 'unit_4',
-    num: 4,
-    title: 'Unit 4: Functions Involving Parameters, Vectors, and Matrices',
-    weight: 'Additional AP Topics',
+    unit_id: 'unit_4a',
+    num: '4A',
+    title: 'Unit 4A - Functions Involving Parameters, Vectors, and Matrices',
+    weight: 'Additional AP Topics (Part A)',
     accent: 'from-amber-600 to-orange-700',
   },
+  {
+    unit_id: 'unit_4b',
+    num: '4B',
+    title: 'Unit 4B - Functions Involving Parameters, Vectors, and Matrices',
+    weight: 'Additional AP Topics (Part B)',
+    accent: 'from-orange-600 to-rose-700',
+  },
 ];
+
+function parseTopicSortTuple(id: string): [number, number, string] {
+  const s = String(id || '').trim();
+  const revMatch = s.match(/^Unit\s+(\d+)([AB])?\s+REVIEW$/i);
+  if (revMatch) {
+    const uNum = parseInt(revMatch[1], 10) || 99;
+    const part = (revMatch[2] || '').toUpperCase();
+    return [uNum, part === 'A' ? 8.9 : 99.9, 'Z'];
+  }
+  const m = s.match(/^(\d+)\.(\d+)([A-Z])?$/i);
+  if (m) {
+    return [parseInt(m[1], 10), parseInt(m[2], 10), (m[3] || '').toUpperCase()];
+  }
+  return [99, 99, s];
+}
 
 export const ProgressTrackerPage: React.FC<ProgressTrackerPageProps> = ({
   onNavigate,
@@ -137,10 +166,11 @@ export const ProgressTrackerPage: React.FC<ProgressTrackerPageProps> = ({
 
   const allTopics: TopicTelemetryStat[] = snapshot?.topicStats
     ? (Object.values(snapshot.topicStats) as TopicTelemetryStat[]).sort((a, b) => {
-        const [uA, tA] = a.topic_id.split('.').map(Number);
-        const [uB, tB] = b.topic_id.split('.').map(Number);
+        const [uA, tA, sA] = parseTopicSortTuple(a.topic_id);
+        const [uB, tB, sB] = parseTopicSortTuple(b.topic_id);
         if (uA !== uB) return uA - uB;
-        return tA - tB;
+        if (tA !== tB) return tA - tB;
+        return sA.localeCompare(sB);
       })
     : [];
 
@@ -268,7 +298,7 @@ export const ProgressTrackerPage: React.FC<ProgressTrackerPageProps> = ({
                   {masteredTopicsCount}
                 </span>
                 <span className="text-xs font-mono text-slate-400">
-                  / {allTopics.length || 37} CED Topics
+                  / {allTopics.length || 71} Curriculum Topics
                 </span>
               </div>
             </div>
@@ -487,11 +517,13 @@ export const ProgressTrackerPage: React.FC<ProgressTrackerPageProps> = ({
               <span>Unit Filter:</span>
             </span>
             {[
-              { id: 'all', label: 'All Units (1–4)' },
+              { id: 'all', label: 'All Units (1–4B)' },
               { id: 'unit_1', label: 'Unit 1' },
-              { id: 'unit_2', label: 'Unit 2' },
+              { id: 'unit_2a', label: 'Unit 2A' },
+              { id: 'unit_2b', label: 'Unit 2B' },
               { id: 'unit_3', label: 'Unit 3' },
-              { id: 'unit_4', label: 'Unit 4' },
+              { id: 'unit_4a', label: 'Unit 4A' },
+              { id: 'unit_4b', label: 'Unit 4B' },
             ].map((u) => (
               <button
                 key={u.id}
@@ -615,7 +647,7 @@ export const ProgressTrackerPage: React.FC<ProgressTrackerPageProps> = ({
                           <div className="space-y-1.5 lg:w-5/12">
                             <div className="flex flex-wrap items-center gap-2">
                               <span className="px-2.5 py-0.5 rounded-lg bg-slate-900 text-white font-mono text-xs font-bold">
-                                Topic {topic.topic_id}
+                                {String(topic.topic_id).startsWith('Unit') ? topic.topic_id : `Topic ${topic.topic_id}`}
                               </span>
                               <span
                                 className={`px-2.5 py-0.5 rounded-full text-[11px] font-bold border ${getStatusBadgeClasses(

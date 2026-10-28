@@ -8,6 +8,7 @@ import { initializeApp, getApps, getApp } from "https://www.gstatic.com/firebase
 import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-auth.js";
 import {
   getFirestore,
+  setLogLevel,
   collection,
   doc,
   getDoc,
@@ -16,6 +17,14 @@ import {
   query,
   where
 } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-firestore.js";
+import {
+  AP_CURRICULUM,
+  UNIT_METADATA,
+  TOPIC_TITLES,
+  getUnitIdForTopic,
+  compareTopicIds,
+  formatTopicDisplayLabel
+} from "/lib/ap-curriculum.js";
 
 // ============================================================================
 // 1. FIREBASE INITIALIZATION & CATALOG METADATA
@@ -24,89 +33,60 @@ const firebaseConfig = window.firebaseConfig || {};
 const app = getApps().length ? getApp() : initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const databaseId = firebaseConfig.firestoreDatabaseId || "(default)";
+try {
+  setLogLevel("silent");
+} catch (_e) {
+  // Ignore
+}
 const db = getFirestore(app, databaseId);
+
+const READ_QUOTA_KEY = "mathprep_firestore_read_quota_exhausted";
+const WRITE_QUOTA_KEY = "mathprep_firestore_write_quota_exhausted";
+
+function isQuotaError(err) {
+  const msg = String(err?.message || err?.code || err || "").toLowerCase();
+  return (
+    msg.includes("quota") ||
+    msg.includes("resource-exhausted") ||
+    msg.includes("resource_exhausted")
+  );
+}
+
+function isReadQuotaExhausted() {
+  try {
+    return sessionStorage.getItem(READ_QUOTA_KEY) === "1";
+  } catch {
+    return false;
+  }
+}
+
+function isWriteQuotaExhausted() {
+  try {
+    return sessionStorage.getItem(WRITE_QUOTA_KEY) === "1";
+  } catch {
+    return false;
+  }
+}
+
+function markReadQuotaExhausted() {
+  try {
+    sessionStorage.setItem(READ_QUOTA_KEY, "1");
+  } catch {
+    // Ignore
+  }
+}
+
+function markWriteQuotaExhausted() {
+  try {
+    sessionStorage.setItem(WRITE_QUOTA_KEY, "1");
+  } catch {
+    // Ignore
+  }
+}
 
 const STORAGE_MASTERY_KEY = "mathprep_student_mastery_v1";
 const STORAGE_TELEMETRY_KEY = "mathprep_student_telemetry_v1";
 const STORAGE_ACTIVE_SESSION_KEY = "mathprep_active_practice_session_v1";
-
-const UNIT_METADATA = {
-  unit_1: {
-    id: "unit_1",
-    num: 1,
-    title: "Unit 1: Polynomial and Rational Functions",
-    weight: "30%–40% Exam Weight",
-    description: "Rates of change, concavity, polynomial zeros, end behavior, rational asymptotes, holes, transformations, and function models."
-  },
-  unit_2: {
-    id: "unit_2",
-    num: 2,
-    title: "Unit 2: Exponential and Logarithmic Functions",
-    weight: "27%–40% Exam Weight",
-    description: "Arithmetic/geometric sequences, exponential growth/decay, function composition, inverses, logarithmic expressions, equations, and semi-log plots."
-  },
-  unit_3: {
-    id: "unit_3",
-    num: 3,
-    title: "Unit 3: Trigonometric and Polar Functions",
-    weight: "30%–35% Exam Weight",
-    description: "Periodic phenomena, unit circle radians, sinusoidal graphs and modeling, tangent/reciprocal functions, inverse trig, identities, and polar coordinates."
-  },
-  unit_4: {
-    id: "unit_4",
-    num: 4,
-    title: "Unit 4: Functions Involving Parameters, Vectors, and Matrices",
-    weight: "Additional AP Topics",
-    description: "Parametric planar motion, rates of change, conic sections, vectors in 2D, dot products, matrices, linear transformations, determinants, and Markov chains."
-  }
-};
-
-const TOPIC_TITLES = {
-  "1.1": "Change in Tandem",
-  "1.2": "Rates of Change",
-  "1.3": "Rates of Change in Linear and Quadratic Functions",
-  "1.4": "Polynomial Functions and Rates of Change",
-  "1.5": "Polynomial Functions and Complex Zeros",
-  "1.6": "Polynomial Functions and End Behavior",
-  "1.7": "Rational Functions and End Behavior",
-  "1.8": "Rational Functions and Zeros",
-  "1.9": "Rational Functions and Vertical Asymptotes",
-  "1.10": "Rational Functions and Holes",
-  "1.11": "Equivalent Representations of Polynomial and Rational Expressions",
-  "1.12": "Transformations of Functions",
-  "1.13": "Function Model Selection and Assumption Articulation",
-  "1.14": "Function Model Construction and Application",
-  "1.15": "Composition of Functions",
-  "1.16": "Inverse Functions",
-  "2.1": "Change in Arithmetic and Geometric Sequences",
-  "2.2": "Change in Linear and Exponential Functions",
-  "2.3": "Exponential Functions",
-  "2.4": "Exponential Function Manipulation",
-  "2.5": "Exponential Function Context and Data Modeling",
-  "2.6": "Competing Function Model Validation",
-  "2.7": "Logarithmic Expressions and Functions",
-  "3.1": "Periodic Phenomena",
-  "3.2": "Sine, Cosine, and Tangent",
-  "3.3": "Sine and Cosine Function Values",
-  "3.4": "Sine and Cosine Function Graphs",
-  "3.5": "Sinusoidal Functions",
-  "3.6": "Sinusoidal Function Transformations",
-  "3.7": "Sinusoidal Function Context and Data Modeling",
-  "3.8": "The Tangent Function",
-  "3.9": "Inverse Trigonometric Functions",
-  "3.10": "Trigonometric Equations and Inequalities",
-  "3.11": "The Secant, Cosecant, and Cotangent Functions & Polar Curves",
-  "4.1": "Parametric Functions",
-  "4.2": "Parametric Functions Modeling Planar Motion",
-  "4.3": "Parametric Functions and Rates of Change",
-  "4.4": "Parametrically Defined Circles and Lines",
-  "4.5": "Implicitly Defined Functions and Conic Sections",
-  "4.6": "Vectors in Two Dimensions",
-  "4.7": "Vector-Valued Functions",
-  "4.8": "Matrices and Linear Transformations",
-  "4.9": "Matrix Inverse and Determinants",
-  "4.10": "Matrices Modeling Contexts (Markov Chains)"
-};
 
 // ============================================================================
 // 2. PRACTICE HUB & SESSION STATE
@@ -138,9 +118,11 @@ const practiceState = {
   // Hub View & Selection State
   expandedUnits: {
     unit_1: true,
-    unit_2: false,
+    unit_2a: false,
+    unit_2b: false,
     unit_3: false,
-    unit_4: false
+    unit_4a: false,
+    unit_4b: false
   },
   selectedTopics: new Set(), // e.g., Set(['1.1', '1.3'])
 
@@ -444,12 +426,7 @@ function formatTimeMMSS(totalSec) {
   return `${String(mins).padStart(2, "0")}:${String(rem).padStart(2, "0")}`;
 }
 
-function compareTopicIds(a, b) {
-  const [uA, tA] = String(a).split(".").map(Number);
-  const [uB, tB] = String(b).split(".").map(Number);
-  if (uA !== uB) return (uA || 0) - (uB || 0);
-  return (tA || 0) - (tB || 0);
-}
+
 
 // ============================================================================
 // 4. MASTERY & TELEMETRY PERSISTENCE (LOCALSTORAGE + FIRESTORE)
@@ -523,10 +500,9 @@ function recomputeAggregatedTelemetry() {
 
   // Seed all known topics from TOPIC_TITLES
   Object.entries(TOPIC_TITLES).forEach(([topicId, title]) => {
-    const unitNum = String(topicId).split(".")[0] || "1";
     topicAgg[topicId] = {
       topic_id: topicId,
-      unit_id: `unit_${unitNum}`,
+      unit_id: getUnitIdForTopic(topicId),
       title,
       total_attempted: 0,
       total_correct: 0,
@@ -555,10 +531,9 @@ function recomputeAggregatedTelemetry() {
     const isCorrect = Boolean(entry.is_correct);
 
     if (!topicAgg[topicId]) {
-      const uNum = String(topicId).split(".")[0] || "1";
       topicAgg[topicId] = {
         topic_id: topicId,
-        unit_id: `unit_${uNum}`,
+        unit_id: getUnitIdForTopic(topicId),
         title: TOPIC_TITLES[topicId] || `Topic ${topicId}`,
         total_attempted: 0,
         total_correct: 0,
@@ -721,7 +696,7 @@ function getStudentTelemetrySnapshot() {
 window.getStudentTelemetryData = getStudentTelemetrySnapshot;
 
 async function syncMasteryFromFirestore(user) {
-  if (!user || !user.uid) return;
+  if (!user || !user.uid || isReadQuotaExhausted()) return;
   try {
     const ref = doc(db, "user_progress", user.uid);
     const snap = await getDoc(ref);
@@ -734,7 +709,6 @@ async function syncMasteryFromFirestore(user) {
         };
       }
       if (data && Array.isArray(data.telemetryLog) && data.telemetryLog.length > 0) {
-        // Merge by timestamp + question_id
         const existingKeys = new Set(
           practiceState.telemetryLog.map((e) => `${e.question_id}_${e.timestamp}`)
         );
@@ -749,13 +723,15 @@ async function syncMasteryFromFirestore(user) {
       applyHubFiltersAndRender();
     }
   } catch (err) {
-    // Silent fallback to localStorage if Firestore rule/network unavailable
+    if (isQuotaError(err)) {
+      markReadQuotaExhausted();
+    }
   }
 }
 
 async function syncMasteryToFirestore() {
   const user = practiceState.currentUser;
-  if (!user || !user.uid) return;
+  if (!user || !user.uid || isWriteQuotaExhausted()) return;
   try {
     const ref = doc(db, "user_progress", user.uid);
     await setDoc(
@@ -771,7 +747,9 @@ async function syncMasteryToFirestore() {
       { merge: true }
     );
   } catch (err) {
-    // Keep in localStorage if offline
+    if (isQuotaError(err)) {
+      markWriteQuotaExhausted();
+    }
   }
 }
 
@@ -884,27 +862,31 @@ async function loadPracticeQuestionBank() {
     // Non-fatal
   }
 
-  // 3. Query live Firestore `question_bank` where `is_published == true`
-  try {
-    const qRef = query(collection(db, "question_bank"), where("is_published", "==", true));
-    const snap = await getDocs(qRef);
-    if (!snap.empty) {
-      snap.forEach((docSnap) => {
-        const data = docSnap.data();
-        if (data && data.id) {
-          if (data.is_published === false) {
-            mergedMap.delete(data.id);
-          } else {
-            mergedMap.set(data.id, {
-              ...data,
-              difficulty: normalizeDifficultyTier(data.difficulty)
-            });
+  // 3. Query live Firestore `question_bank` where `is_published == true` (skip if static 2,288 bank is loaded or read quota is exhausted)
+  if (!isReadQuotaExhausted() && mergedMap.size === 0) {
+    try {
+      const qRef = query(collection(db, "question_bank"), where("is_published", "==", true));
+      const snap = await getDocs(qRef);
+      if (!snap.empty) {
+        snap.forEach((docSnap) => {
+          const data = docSnap.data();
+          if (data && data.id) {
+            if (data.is_published === false) {
+              mergedMap.delete(data.id);
+            } else {
+              mergedMap.set(data.id, {
+                ...data,
+                difficulty: normalizeDifficultyTier(data.difficulty)
+              });
+            }
           }
-        }
-      });
+        });
+      }
+    } catch (err) {
+      if (isQuotaError(err)) {
+        markReadQuotaExhausted();
+      }
     }
-  } catch (err) {
-    // Use static 2,288 bank if Firestore query is offline
   }
 
   practiceState.allQuestions = Array.from(mergedMap.values()).sort((a, b) => {
@@ -931,36 +913,40 @@ async function queryFilteredQuestionsFromFirestore(criteria = {}) {
     calculator = "all"
   } = criteria;
 
-  try {
-    const constraints = [where("is_published", "==", true)];
-    if (topic && topic !== "all" && !Array.isArray(topic)) {
-      constraints.push(where("topic_id", "==", String(topic)));
-    } else if (unit && unit !== "all") {
-      constraints.push(where("unit_id", "==", String(unit)));
-    }
-    if (calculator === "calc") {
-      constraints.push(where("calculator_active", "==", true));
-    } else if (calculator === "nocalc") {
-      constraints.push(where("calculator_active", "==", false));
-    }
+  if (!isReadQuotaExhausted() && practiceState.allQuestions.length === 0) {
+    try {
+      const constraints = [where("is_published", "==", true)];
+      if (topic && topic !== "all" && !Array.isArray(topic)) {
+        constraints.push(where("topic_id", "==", String(topic)));
+      } else if (unit && unit !== "all") {
+        constraints.push(where("unit_id", "==", String(unit)));
+      }
+      if (calculator === "calc") {
+        constraints.push(where("calculator_active", "==", true));
+      } else if (calculator === "nocalc") {
+        constraints.push(where("calculator_active", "==", false));
+      }
 
-    const qRef = query(collection(db, "question_bank"), ...constraints);
-    const snap = await getDocs(qRef);
-    if (!snap.empty) {
-      const existingIds = new Set(practiceState.allQuestions.map((q) => q.id));
-      snap.forEach((d) => {
-        const item = d.data();
-        if (item && item.id && item.is_published !== false && !existingIds.has(item.id)) {
-          practiceState.allQuestions.push({
-            ...item,
-            difficulty: normalizeDifficultyTier(item.difficulty)
-          });
-          existingIds.add(item.id);
-        }
-      });
+      const qRef = query(collection(db, "question_bank"), ...constraints);
+      const snap = await getDocs(qRef);
+      if (!snap.empty) {
+        const existingIds = new Set(practiceState.allQuestions.map((q) => q.id));
+        snap.forEach((d) => {
+          const item = d.data();
+          if (item && item.id && item.is_published !== false && !existingIds.has(item.id)) {
+            practiceState.allQuestions.push({
+              ...item,
+              difficulty: normalizeDifficultyTier(item.difficulty)
+            });
+            existingIds.add(item.id);
+          }
+        });
+      }
+    } catch (err) {
+      if (isQuotaError(err)) {
+        markReadQuotaExhausted();
+      }
     }
-  } catch (err) {
-    // Continue with loaded bank
   }
 
   const normalizedAllowedDiffs = difficulties.map((d) => normalizeDifficultyTier(d));
@@ -993,13 +979,18 @@ function populateHubTopicDropdowns() {
   const filteredTopics =
     selectedUnit === "all"
       ? allTopics
-      : allTopics.filter((t) => `unit_${t.split(".")[0]}` === selectedUnit);
+      : allTopics.filter((t) => getUnitIdForTopic(t) === selectedUnit);
 
   const prevTopic = practiceState.filters.topic;
   topicSel.innerHTML =
     `<option value="all">All Topics (${filteredTopics.length})</option>` +
     filteredTopics
-      .map((code) => `<option value="${code}">Topic ${code}: ${escapeHtml(TOPIC_TITLES[code])}</option>`)
+      .map(
+        (code) =>
+          `<option value="${escapeHtml(code)}">${escapeHtml(
+            formatTopicDisplayLabel(code, TOPIC_TITLES[code])
+          )}</option>`
+      )
       .join("");
 
   if (prevTopic !== "all" && filteredTopics.includes(prevTopic)) {
@@ -1161,7 +1152,7 @@ function renderPracticeHubDirectory() {
     filteredByTopic.get(tId).push(q);
   });
 
-  const unitKeys = ["unit_1", "unit_2", "unit_3", "unit_4"].filter(
+  const unitKeys = ["unit_1", "unit_2a", "unit_2b", "unit_3", "unit_4a", "unit_4b"].filter(
     (uKey) => practiceState.filters.unit === "all" || practiceState.filters.unit === uKey
   );
 
@@ -1169,8 +1160,10 @@ function renderPracticeHubDirectory() {
 
   unitKeys.forEach((uKey) => {
     const uMeta = UNIT_METADATA[uKey];
+    if (!uMeta) return;
+    const isLockedUnit = uKey !== "unit_1" && !window.mathprepIsPremium;
     const unitTopics = Object.keys(TOPIC_TITLES)
-      .filter((code) => `unit_${code.split(".")[0]}` === uKey)
+      .filter((code) => getUnitIdForTopic(code) === uKey)
       .filter((code) => practiceState.filters.topic === "all" || practiceState.filters.topic === code)
       .sort(compareTopicIds);
 
@@ -1218,8 +1211,8 @@ function renderPracticeHubDirectory() {
               onclick="window.togglePracticeUnitAccordion('${uKey}')"
               class="text-left flex items-center gap-3 cursor-pointer group"
             >
-              <span class="w-8 h-8 rounded-lg bg-blue-600 text-white font-bold text-sm flex items-center justify-center shrink-0 shadow-2xs">
-                ${uMeta.num}
+              <span class="w-8 h-8 rounded-lg bg-blue-600 text-white font-bold text-xs flex items-center justify-center shrink-0 shadow-2xs">
+                ${escapeHtml(uMeta.num)}
               </span>
               <div>
                 <div class="flex items-center gap-2">
@@ -1227,13 +1220,13 @@ function renderPracticeHubDirectory() {
                     ${escapeHtml(uMeta.title)}
                   </h3>
                   ${
-                    uMeta.num >= 2 && !window.mathprepIsPremium
+                    isLockedUnit
                       ? `<span class="text-[10px] font-bold text-amber-800 bg-amber-100 border border-amber-300 px-2 py-0.5 rounded-full inline-flex items-center gap-1">🔒 Premium</span>`
                       : ""
                   }
                 </div>
                 <p class="text-xs text-slate-500 font-medium">
-                  ${topicsWithMatches.length} subtopics • <span class="text-slate-700 font-semibold">${unitQuestionCount} questions</span> • ${escapeHtml(uMeta.weight)}
+                  ${topicsWithMatches.length} topics • <span class="text-slate-700 font-semibold">${unitQuestionCount} questions</span> • ${escapeHtml(uMeta.weight)}
                 </p>
               </div>
             </button>
@@ -1247,20 +1240,20 @@ function renderPracticeHubDirectory() {
             </div>
 
             ${
-              uMeta.num >= 2 && !window.mathprepIsPremium
+              isLockedUnit
                 ? `<button
                     type="button"
-                    onclick="window.openPremiumModal('AP Precalculus Unit ${uMeta.num}', 'Practice question sets for Unit ${uMeta.num} are locked on the Free tier. Upgrade to MathPrep Premium for full access!')"
+                    onclick="window.openPremiumModal('AP Precalculus Unit ${escapeHtml(uMeta.num)}', 'Practice question sets for Unit ${escapeHtml(uMeta.num)} are locked on the Free tier. Upgrade to MathPrep Premium for full access!')"
                     class="px-3.5 py-1.5 text-xs font-bold text-amber-900 bg-amber-100 hover:bg-amber-200 border border-amber-300 rounded-xl transition-colors cursor-pointer whitespace-nowrap flex items-center gap-1"
                   >
-                    <span>🔒 Unlock Unit ${uMeta.num}</span>
+                    <span>🔒 Unlock Unit ${escapeHtml(uMeta.num)}</span>
                   </button>`
                 : `<button
                     type="button"
                     onclick="window.openPracticeLauncher({ unitId: '${uKey}', label: '${escapeHtml(uMeta.title)}' })"
                     class="px-3.5 py-1.5 text-xs font-bold text-blue-700 bg-blue-50 hover:bg-blue-100 border border-blue-200 rounded-xl transition-colors cursor-pointer whitespace-nowrap"
                   >
-                    Practice Unit ${uMeta.num}
+                    Practice Unit ${escapeHtml(uMeta.num)}
                   </button>`
             }
 
@@ -1268,7 +1261,7 @@ function renderPracticeHubDirectory() {
               type="button"
               onclick="window.togglePracticeUnitAccordion('${uKey}')"
               class="p-1.5 rounded-lg text-slate-500 hover:text-slate-900 hover:bg-slate-200/60 transition-colors cursor-pointer"
-              aria-label="Expand or collapse Unit ${uMeta.num}"
+              aria-label="Expand or collapse Unit ${escapeHtml(uMeta.num)}"
             >
               <svg class="w-5 h-5 transition-transform duration-200 ${isExpanded ? "rotate-180" : ""}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
@@ -1314,11 +1307,11 @@ function renderPracticeHubDirectory() {
                     />
                     <div class="min-w-0">
                       <div class="flex flex-wrap items-center gap-2">
-                        <span class="font-mono text-xs font-bold text-blue-700 bg-blue-50 border border-blue-200/80 px-2 py-0.5 rounded-md">
-                          Topic ${code}
+                        <span class="font-mono text-xs font-bold ${String(code).startsWith("Unit") ? "text-emerald-800 bg-emerald-50 border-emerald-200/80" : "text-blue-700 bg-blue-50 border-blue-200/80"} border px-2 py-0.5 rounded-md">
+                          ${String(code).startsWith("Unit") ? "REVIEW" : `Topic ${escapeHtml(code)}`}
                         </span>
                         <span
-                          onclick="window.openPracticeLauncher({ topicId: '${code}', label: 'Topic ${code}: ${escapeHtml(title)}' })"
+                          onclick="window.openPracticeLauncher({ topicId: '${escapeHtml(code)}', label: '${escapeHtml(formatTopicDisplayLabel(code, title))}' })"
                           class="text-sm sm:text-base font-bold text-slate-900 hover:text-blue-600 cursor-pointer transition-colors"
                         >
                           ${escapeHtml(title)}
@@ -1358,7 +1351,7 @@ function renderPracticeHubDirectory() {
 
                     <button
                       type="button"
-                      onclick="window.openPracticeLauncher({ topicId: '${code}', label: 'Topic ${code}: ${escapeHtml(title)}' })"
+                      onclick="window.openPracticeLauncher({ topicId: '${escapeHtml(code)}', label: '${escapeHtml(formatTopicDisplayLabel(code, title))}' })"
                       class="px-3.5 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-xl shadow-2xs transition-all cursor-pointer flex items-center gap-1.5"
                     >
                       <span>Practice</span>
@@ -1439,19 +1432,19 @@ function openPracticeLauncher(options = {}) {
   if (topicId) {
     targetTopics = [String(topicId)];
     const tTitle = TOPIC_TITLES[topicId] || `Topic ${topicId}`;
-    sourceLabel = label || `Topic ${topicId}: ${tTitle}`;
+    sourceLabel = label || formatTopicDisplayLabel(topicId, tTitle);
   } else if (Array.isArray(customTopics) && customTopics.length > 0) {
     targetTopics = customTopics.map(String).sort(compareTopicIds);
     sourceLabel =
       label ||
       (targetTopics.length === 1
-        ? `Topic ${targetTopics[0]}: ${TOPIC_TITLES[targetTopics[0]] || ""}`
+        ? formatTopicDisplayLabel(targetTopics[0], TOPIC_TITLES[targetTopics[0]] || "")
         : `${targetTopics.length} Selected Topics (${targetTopics.slice(0, 4).join(", ")}${
             targetTopics.length > 4 ? "…" : ""
           })`);
   } else if (unitId) {
     targetTopics = Object.keys(TOPIC_TITLES)
-      .filter((code) => `unit_${code.split(".")[0]}` === unitId)
+      .filter((code) => getUnitIdForTopic(code) === unitId)
       .sort(compareTopicIds);
     sourceLabel = label || UNIT_METADATA[unitId]?.title || `Unit Practice`;
   } else if (practiceState.selectedTopics.size > 0) {
@@ -1459,25 +1452,25 @@ function openPracticeLauncher(options = {}) {
     sourceLabel = `${targetTopics.length} Selected Topics`;
   } else if (practiceState.filters.topic !== "all") {
     targetTopics = [practiceState.filters.topic];
-    sourceLabel = `Topic ${practiceState.filters.topic}: ${TOPIC_TITLES[practiceState.filters.topic] || ""}`;
+    sourceLabel = formatTopicDisplayLabel(
+      practiceState.filters.topic,
+      TOPIC_TITLES[practiceState.filters.topic] || ""
+    );
   } else if (practiceState.filters.unit !== "all") {
     const uId = practiceState.filters.unit;
     targetTopics = Object.keys(TOPIC_TITLES)
-      .filter((code) => `unit_${code.split(".")[0]}` === uId)
+      .filter((code) => getUnitIdForTopic(code) === uId)
       .sort(compareTopicIds);
     sourceLabel = UNIT_METADATA[uId]?.title || "Unit Practice";
   }
 
-  // Premium Tier Gate for Unit 2+
-  const hasUnit2Plus = targetTopics.some((t) => {
-    const u = parseInt(String(t).split(".")[0], 10);
-    return u >= 2;
-  });
+  // Premium Tier Gate for Unit 2A+
+  const hasUnit2Plus = targetTopics.some((t) => getUnitIdForTopic(t) !== "unit_1");
   if (hasUnit2Plus && !window.mathprepIsPremium) {
     if (typeof window.openPremiumModal === "function") {
       window.openPremiumModal(
-        "AP Precalculus Units 2–4 Practice Bank",
-        "Practice question sets for Unit 2 (Exponential/Logarithmic), Unit 3 (Trigonometric/Polar), and Unit 4 (Parametric/Vectors/Matrices) are locked on the Free tier. Upgrade to MathPrep Premium for full access!"
+        "AP Precalculus Units 2A–4B Practice Bank",
+        "Practice question sets for Unit 2A, Unit 2B, Unit 3, Unit 4A, and Unit 4B are locked on the Free tier. Upgrade to MathPrep Premium for full access!"
       );
     }
     return;
@@ -3027,7 +3020,7 @@ window.togglePracticeUnitSelection = function (unitKey, ev) {
     }
     return;
   }
-  const unitTopics = Object.keys(TOPIC_TITLES).filter((code) => `unit_${code.split(".")[0]}` === unitKey);
+  const unitTopics = Object.keys(TOPIC_TITLES).filter((code) => getUnitIdForTopic(code) === unitKey);
   const allSelected = unitTopics.every((c) => practiceState.selectedTopics.has(c));
   unitTopics.forEach((c) => {
     if (allSelected) practiceState.selectedTopics.delete(c);
@@ -3038,12 +3031,12 @@ window.togglePracticeUnitSelection = function (unitKey, ev) {
 };
 
 window.togglePracticeTopicCheckbox = function (topicCode, checked) {
-  const uNum = parseInt(String(topicCode).split(".")[0], 10);
-  if (uNum >= 2 && !window.mathprepIsPremium) {
+  const uId = getUnitIdForTopic(topicCode);
+  if (uId !== "unit_1" && !window.mathprepIsPremium) {
     if (typeof window.openPremiumModal === "function") {
       window.openPremiumModal(
-        "AP Precalculus Units 2–4 Practice Bank",
-        "Topic " + topicCode + " is in Unit " + uNum + ". Upgrade to MathPrep Premium to practice questions for Units 2–4."
+        "AP Precalculus Units 2A–4B Practice Bank",
+        "Topic " + topicCode + " requires MathPrep Premium to practice."
       );
     }
     return;

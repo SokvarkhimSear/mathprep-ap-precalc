@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { ArrowLeft, Search, BookOpen, Calculator, FileText, CheckSquare, Lock } from 'lucide-react';
 import { collection, getDocs } from 'firebase/firestore';
-import { db } from '../firebase';
+import { db, isReadQuotaExhausted, isQuotaError, markReadQuotaExhausted } from '../firebase';
 import { LESSONS, UNITS } from '../data/curriculumData';
 import { Lesson, PageId } from '../types';
 import { LessonModal } from './LessonModal';
@@ -10,8 +10,8 @@ import { UnitFilterBar } from './UnitFilterBar';
 import { useAuth } from '../context/AuthContext';
 
 interface LessonsPageProps {
-  selectedUnit: number | null;
-  onSelectUnit: (unit: number | null) => void;
+  selectedUnit: string | number | null;
+  onSelectUnit: (unit: string | number | null) => void;
   onNavigate: (page: PageId) => void;
   onOpenLimmy?: (context?: string) => void;
 }
@@ -62,55 +62,59 @@ export const LessonsPage: React.FC<LessonsPageProps> = ({
       };
     };
 
-    getDocs(collection(db, 'curriculum'))
-      .then((snap) => {
-        if (!isMounted || snap.empty) return;
-        const firestoreMap = new Map<string, any>();
-        snap.forEach((docSnap) => {
-          const data = docSnap.data();
-          const code = String(data.topic_id || data.topicCode || '');
-          if (code && (data.master_lesson || data.lesson)) {
-            firestoreMap.set(code, data);
+    if (!isReadQuotaExhausted()) {
+      getDocs(collection(db, 'curriculum'))
+        .then((snap) => {
+          if (!isMounted || snap.empty) return;
+          const firestoreMap = new Map<string, any>();
+          snap.forEach((docSnap) => {
+            const data = docSnap.data();
+            const code = String(data.topic_id || data.topicCode || '');
+            if (code && (data.master_lesson || data.lesson)) {
+              firestoreMap.set(code, data);
+            }
+          });
+
+          if (firestoreMap.size > 0) {
+            setLessonsList((prev) =>
+              prev.map((baseLesson) => {
+                const live = firestoreMap.get(baseLesson.topicCode);
+                if (!live) return baseLesson;
+                const liveOverview =
+                  live.master_lesson?.conceptual_overview ||
+                  live.lesson?.summary ||
+                  live.lesson?.overview ||
+                  baseLesson.summary;
+                const cleanTitle = String(live.topic_title || live.title || baseLesson.title).replace(
+                  /^Topic\s+[0-9A-Za-z.]+:\s*/i,
+                  ''
+                );
+                return {
+                  ...baseLesson,
+                  title: cleanTitle,
+                  summary: liveOverview,
+                  lesson: live.lesson?.conceptual_sections ? live.lesson : baseLesson.lesson,
+                  formula_sheet:
+                    (live.formula_sheet?.sub_topics?.length || 0) >=
+                    (baseLesson.formula_sheet?.sub_topics?.length || 0)
+                      ? live.formula_sheet
+                      : baseLesson.formula_sheet,
+                  master_lesson: live.master_lesson || baseLesson.master_lesson,
+                  practice_section: mergePracticeSections(
+                    baseLesson.practice_section,
+                    live.practice_section
+                  ),
+                };
+              })
+            );
+          }
+        })
+        .catch((err) => {
+          if (isQuotaError(err)) {
+            markReadQuotaExhausted();
           }
         });
-
-        if (firestoreMap.size > 0) {
-          setLessonsList((prev) =>
-            prev.map((baseLesson) => {
-              const live = firestoreMap.get(baseLesson.topicCode);
-              if (!live) return baseLesson;
-              const liveOverview =
-                live.master_lesson?.conceptual_overview ||
-                live.lesson?.summary ||
-                live.lesson?.overview ||
-                baseLesson.summary;
-              const cleanTitle = String(live.topic_title || live.title || baseLesson.title).replace(
-                /^Topic\s+\d+\.\d+:\s*/i,
-                ''
-              );
-              return {
-                ...baseLesson,
-                title: cleanTitle,
-                summary: liveOverview,
-                lesson: live.lesson?.conceptual_sections ? live.lesson : baseLesson.lesson,
-                formula_sheet:
-                  (live.formula_sheet?.sub_topics?.length || 0) >=
-                  (baseLesson.formula_sheet?.sub_topics?.length || 0)
-                    ? live.formula_sheet
-                    : baseLesson.formula_sheet,
-                master_lesson: live.master_lesson || baseLesson.master_lesson,
-                practice_section: mergePracticeSections(
-                  baseLesson.practice_section,
-                  live.practice_section
-                ),
-              };
-            })
-          );
-        }
-      })
-      .catch(() => {
-        // Fallback to built-in 44 lessons if offline
-      });
+    }
 
     const handleBankUpdated = (ev: Event) => {
       const customEv = ev as CustomEvent;
@@ -174,16 +178,28 @@ export const LessonsPage: React.FC<LessonsPageProps> = ({
   const handleOpenLesson = (lesson: Lesson) => {
     if (lesson.unitNumber >= 2 && !isPremium) {
       openPremiumModal(
-        `Unit ${lesson.unitNumber} (${lesson.topicCode}: ${lesson.title})`,
-        `AP Precalculus Unit ${lesson.unitNumber} is locked on the Free tier. Upgrade to Premium to unlock Units 2, 3, and 4 (all 44 College Board topics, formula sheets, and exam items)!`
+        `Unit ${lesson.unitKey || lesson.unitNumber} (${lesson.topicCode}: ${lesson.title})`,
+        `AP Precalculus Unit ${lesson.unitKey || lesson.unitNumber} is locked on the Free tier. Upgrade to Premium to unlock Units 2A, 2B, 3, 4A, and 4B (all 71 curriculum topics, formula sheets, and exam items)!`
       );
       return;
     }
     setActiveLesson(lesson);
   };
 
+  const lessonMatchesSelectedUnit = (l: Lesson) => {
+    if (!selectedUnit) return true;
+    if (typeof selectedUnit === 'number') {
+      return l.unitNumber === selectedUnit;
+    }
+    const sel = String(selectedUnit).toLowerCase();
+    return (
+      String(l.unitId || '').toLowerCase() === sel ||
+      String(l.unitKey || '').toLowerCase() === sel.replace('unit_', '').replace('unit-', '')
+    );
+  };
+
   const filteredLessons = lessonsList.filter((l) => {
-    const matchesUnit = selectedUnit ? l.unitNumber === selectedUnit : true;
+    const matchesUnit = lessonMatchesSelectedUnit(l);
     const q = searchQuery.trim().toLowerCase();
     const matchesSearch =
       q === '' ||
@@ -194,10 +210,21 @@ export const LessonsPage: React.FC<LessonsPageProps> = ({
     return matchesUnit && matchesSearch;
   });
 
-  const lessonsByUnit = [1, 2, 3, 4].map((uNum) => ({
-    unit: UNITS.find((u) => u.number === uNum)!,
-    lessons: filteredLessons.filter((l) => l.unitNumber === uNum),
+  const lessonsByUnit = UNITS.map((unit) => ({
+    unit,
+    lessons: filteredLessons.filter(
+      (l) => (l.unitId || `unit_${l.unitNumber}`) === (unit.unitId || unit.id)
+    ),
   }));
+
+  const selectedUnitLabel = selectedUnit
+    ? UNITS.find(
+        (u) =>
+          u.unitId === selectedUnit ||
+          u.id === selectedUnit ||
+          (typeof selectedUnit === 'number' && u.number === selectedUnit)
+      )?.shortTitle || `Unit ${selectedUnit}`
+    : 'All Units (1–4B)';
 
   return (
     <div className="py-6 sm:py-10 max-w-7xl w-full mx-auto px-3 sm:px-6 lg:px-8 space-y-6 sm:space-y-8 animate-fade-in max-w-full overflow-x-hidden">
@@ -212,7 +239,7 @@ export const LessonsPage: React.FC<LessonsPageProps> = ({
         </button>
 
         <div className="text-xs text-slate-500 font-medium">
-          AP Precalculus / <span className="text-slate-900 font-semibold">All 44 Curriculum Lessons</span>
+          AP Precalculus / <span className="text-slate-900 font-semibold">All {lessonsList.length} Curriculum Topics</span>
         </div>
       </div>
 
@@ -220,13 +247,13 @@ export const LessonsPage: React.FC<LessonsPageProps> = ({
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
         <div>
           <div className="text-xs font-bold text-blue-600 uppercase tracking-wider mb-1">
-            Complete College Board Syllabus (44 Sub-Units)
+            Complete AP Precalculus Curriculum (Units 1, 2A, 2B, 3, 4A, 4B · {lessonsList.length} Topics)
           </div>
           <h1 className="text-3xl font-bold text-slate-900 tracking-tight">
             AP Precalculus Lessons Hub
           </h1>
           <p className="text-sm text-slate-600 mt-1 max-w-2xl">
-            Every single sub-topic across Units 1–4 (Topics 1.1–1.16, 2.1–2.7, 3.1–3.11, and 4.1–4.10) complete with Master Lessons, Dedicated Formula Sheets, AP Multiple-Choice Questions, and Multi-Part Free-Response Questions with Scoring Rubrics.
+            Every topic and review module across Unit 1, Unit 2A, Unit 2B, Unit 3, Unit 4A, and Unit 4B—complete with Master Lessons, Dedicated Formula Sheets, AP Multiple-Choice Questions, and Multi-Part Free-Response Questions with Scoring Rubrics.
           </p>
         </div>
 
@@ -244,15 +271,14 @@ export const LessonsPage: React.FC<LessonsPageProps> = ({
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Search any topic (e.g. 1.1, 1.3, 2.7, 3.11, holes, semi-log, vectors)..."
+            placeholder="Search any topic (e.g. 1.2, 2.5A, 4.6B, Unit 1 REVIEW, holes, semi-log, vectors)..."
             className="w-full pl-10 pr-4 py-2.5 text-sm bg-white border border-slate-200 rounded-xl text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-600 shadow-2xs transition-all"
           />
         </div>
-
         <div className="flex items-center gap-2 text-xs text-slate-500">
           <span>Showing:</span>
           <span className="font-semibold text-blue-600">
-            {selectedUnit ? `Unit ${selectedUnit}` : 'All 4 Units'} ({filteredLessons.length} of {lessonsList.length} topics)
+            {selectedUnitLabel} ({filteredLessons.length} of {lessonsList.length} topics)
           </span>
           {(selectedUnit || searchQuery) && (
             <button
@@ -279,7 +305,7 @@ export const LessonsPage: React.FC<LessonsPageProps> = ({
             }}
             className="mt-2 text-xs font-semibold text-blue-600 hover:underline cursor-pointer"
           >
-            Show all 44 topics
+            Show all {lessonsList.length} topics
           </button>
         </div>
       ) : selectedUnit ? (
@@ -301,13 +327,13 @@ export const LessonsPage: React.FC<LessonsPageProps> = ({
               <div key={unit.id} className="space-y-5">
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-3 border-b border-slate-200">
                   <div className="flex items-center gap-2.5">
-                    <span className="w-7 h-7 rounded-lg bg-blue-600 text-white font-bold text-xs flex items-center justify-center shrink-0">
-                      {unit.number}
+                    <span className="px-2.5 h-7 rounded-lg bg-blue-600 text-white font-bold text-xs flex items-center justify-center shrink-0">
+                      {unit.unitKey || unit.number}
                     </span>
                     <div>
                       <div className="flex items-center gap-2">
                         <h2 className="text-lg font-bold text-slate-900">
-                          Unit {unit.number}: {unit.title}
+                          {unit.fullTitle || `Unit ${unit.unitKey || unit.number} - ${unit.title}`}
                         </h2>
                         {unit.number >= 2 && !isPremium && (
                           <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold bg-amber-100 text-amber-900 border border-amber-200">
@@ -323,10 +349,10 @@ export const LessonsPage: React.FC<LessonsPageProps> = ({
                   </div>
 
                   <button
-                    onClick={() => onSelectUnit(unit.number)}
+                    onClick={() => onSelectUnit(unit.unitId || unit.number)}
                     className="text-xs font-semibold text-blue-600 hover:text-blue-800 cursor-pointer self-start sm:self-auto"
                   >
-                    Filter Unit {unit.number} Only ({lessons.length} Topics) →
+                    Filter {unit.shortTitle || `Unit ${unit.number}`} Only ({lessons.length} Topics) →
                   </button>
                 </div>
 
@@ -363,6 +389,7 @@ interface LessonCardProps {
 
 const LessonCard: React.FC<LessonCardProps> = ({ lesson, onOpen, isPremium = false }) => {
   const isLocked = lesson.unitNumber >= 2 && !isPremium;
+  const isReviewTopic = lesson.topicCode.toUpperCase().includes('REVIEW');
   const mcqCount = lesson.practice_section?.mcq?.length || 0;
   const frqCount = lesson.practice_section?.frq?.length || 0;
   let formulaCount = 0;
@@ -376,6 +403,8 @@ const LessonCard: React.FC<LessonCardProps> = ({ lesson, onOpen, isPremium = fal
       className={`group bg-white rounded-xl border p-5 shadow-xs transition-all flex flex-col justify-between cursor-pointer relative overflow-hidden ${
         isLocked
           ? 'border-amber-200/90 hover:border-amber-400 bg-gradient-to-b from-white to-amber-50/20'
+          : isReviewTopic
+          ? 'border-indigo-200 hover:shadow-md hover:border-indigo-400 bg-gradient-to-b from-white to-indigo-50/20'
           : 'border-slate-200 hover:shadow-md hover:border-blue-300'
       }`}
     >
@@ -390,17 +419,17 @@ const LessonCard: React.FC<LessonCardProps> = ({ lesson, onOpen, isPremium = fal
         {/* Metadata Header */}
         <div className="flex items-center justify-between text-xs text-slate-500 font-medium mb-2.5">
           <div className="flex items-center gap-1.5">
-            <span className="font-semibold text-blue-600">Unit {lesson.unitNumber}</span>
+            <span className="font-semibold text-blue-600">Unit {lesson.unitKey || lesson.unitNumber}</span>
             <span aria-hidden="true">·</span>
             <span className="font-mono font-bold text-slate-800 bg-slate-100 px-2 py-0.5 rounded">
-              Topic {lesson.topicCode}
+              {isReviewTopic ? lesson.topicCode : `Topic ${lesson.topicCode}`}
             </span>
           </div>
           <span className="text-slate-400">{lesson.duration}</span>
         </div>
 
         <h3 className="text-base sm:text-lg font-bold text-slate-900 group-hover:text-blue-600 transition-colors leading-snug mb-2 flex items-center gap-1.5">
-          <span>{lesson.topicCode}: {lesson.title}</span>
+          <span>{isReviewTopic ? lesson.title : `${lesson.topicCode} ${lesson.title}`}</span>
           {isLocked && <Lock className="w-3.5 h-3.5 text-amber-600 shrink-0" />}
         </h3>
 
