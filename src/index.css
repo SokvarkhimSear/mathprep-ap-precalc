@@ -1,3 +1,6 @@
+@import "tailwindcss";
+@import "katex/dist/katex.min.css";
+
 @layer base {
   html, body {
     max-width: 100% !important;
@@ -307,5 +310,3 @@
   color: #ffffff;
   border: 1px solid #dc2626;
 }
-
-
