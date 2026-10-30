@@ -8,12 +8,26 @@ export async function POST(request) {
   return handleCron(request);
 }
 
+function stripHtml(input, maxLen = 100) {
+  if (!input) return '';
+  return String(input)
+    .replace(/<[^>]*>/g, '')
+    .replace(/[<>]/g, '')
+    .trim()
+    .slice(0, maxLen);
+}
+
 async function handleCron(request) {
   const { searchParams } = new URL(request.url);
-  const secret = searchParams.get('secret');
-  const cronSecret = process.env.CRON_SECRET || 'mathprep_cron_secret_2026';
+  const querySecret = searchParams.get('secret');
+  const authHeader = request.headers.get('authorization') || '';
+  const bearerSecret = authHeader.startsWith('Bearer ') ? authHeader.slice(7).trim() : '';
+  const providedSecret = bearerSecret || querySecret;
 
-  if (secret && secret !== cronSecret) {
+  // Server-only secret (never prefixed with NEXT_PUBLIC_)
+  const cronSecret = process.env.CRON_SECRET;
+
+  if (!cronSecret || !providedSecret || providedSecret !== cronSecret) {
     return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
   }
 
@@ -21,14 +35,14 @@ async function handleCron(request) {
     const { initializeApp, getApps, getApp } = await import('firebase/app');
     const { getFirestore, collection, getDocs, doc, updateDoc } = await import('firebase/firestore');
 
-    const projectId = "resolute-dialect-ns7sz";
-    const databaseId = "ai-studio-mathprepapprecal-6d188591-6b33-4318-b288-3e07c81cc172";
+    const projectId = 'resolute-dialect-ns7sz';
+    const databaseId = 'ai-studio-mathprepapprecal-6d188591-6b33-4318-b288-3e07c81cc172';
 
     const config = {
       projectId,
-      appId: "1:867238495850:web:1e73ace9f74306bf9cec13",
-      apiKey: "AIzaSyAY5HabqmUxnkUY3z4W9g7upzbWIZe_MzU",
-      authDomain: "resolute-dialect-ns7sz.firebaseapp.com",
+      appId: '1:867238495850:web:1e73ace9f74306bf9cec13',
+      apiKey: 'AIzaSyAY5HabqmUxnkUY3z4W9g7upzbWIZe_MzU',
+      authDomain: 'resolute-dialect-ns7sz.firebaseapp.com',
     };
 
     const app = getApps().length ? getApp() : initializeApp(config);
@@ -62,6 +76,7 @@ async function handleCron(request) {
         if (subEndDate > now && subEndDate <= threeDaysFromNow && userData.isPremium === true) {
           remindersCount++;
           if (process.env.RESEND_API_KEY && userData.email) {
+            const safeDisplayName = stripHtml(userData.displayName || 'Student', 80);
             try {
               await fetch('https://api.resend.com/emails', {
                 method: 'POST',
@@ -73,25 +88,25 @@ async function handleCron(request) {
                   from: 'MathPrep <support@mathprep.app>',
                   to: [userData.email],
                   subject: 'Your MathPrep AP Precalculus Subscription is Expiring Soon',
-                  html: `<p>Hi ${userData.displayName || 'Student'},</p><p>Your MathPrep Premium Subscription will expire on <b>${new Date(subEndDateStr).toLocaleDateString()}</b>. Please visit <a href="${process.env.APP_URL || 'https://mathprep.app'}/#/checkout">MathPrep Checkout</a> to upload a payment screenshot and extend your membership.</p>`,
+                  html: `<p>Hi ${safeDisplayName},</p><p>Your MathPrep Premium Subscription will expire on <b>${new Date(subEndDateStr).toLocaleDateString()}</b>. Please visit <a href="${process.env.APP_URL || 'https://mathprep.app'}/#/checkout">MathPrep Checkout</a> to upload a payment screenshot and extend your membership.</p>`,
                 }),
               });
-            } catch (emailErr) {
-              console.warn('[Cron Email Error]:', emailErr);
+            } catch (_emailErr) {
+              // Suppress internal email error details from leaking
             }
           }
         }
       }
     }
 
+    // Anti-doxxing: Return only aggregate counters, never user objects, emails, or payment statuses
     return NextResponse.json({
       success: true,
       timestamp: now.toISOString(),
       expiredSubscriptionsProcessed: expiredCount,
       expiringRemindersSent: remindersCount,
     });
-  } catch (error) {
-    console.error('[Cron Route Exception]:', error);
-    return NextResponse.json({ success: false, error: error?.message }, { status: 500 });
+  } catch (_error) {
+    return NextResponse.json({ success: false, error: 'Cron execution failed' }, { status: 500 });
   }
 }

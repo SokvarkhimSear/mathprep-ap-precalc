@@ -33,7 +33,8 @@ export const TopBar: React.FC<TopBarProps> = ({ activePage, onNavigate, onOpenLi
     { id: 'practice', label: 'Practice Hub', shortLabel: 'Practice' },
     { id: 'progress', label: 'Progress Tracker', shortLabel: 'Progress' },
     { id: 'formulas', label: 'Formula Sheet', shortLabel: 'Formulas' },
-    { id: 'checkout', label: '👑 Premium', shortLabel: 'Premium' },
+    // Temporarily hidden while platform is 100% free:
+    // { id: 'checkout', label: '👑 Premium', shortLabel: 'Premium' },
   ];
 
   return (

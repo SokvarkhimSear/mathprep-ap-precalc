@@ -5,6 +5,7 @@ import {defineConfig} from 'vite';
 
 export default defineConfig(() => {
   return {
+    envPrefix: ['VITE_'],
     plugins: [
       {
         name: 'payway-server-action-bridge',
@@ -15,12 +16,30 @@ export default defineConfig(() => {
 export async function createKhqrTransaction(amount = '10.00') {
   const res = await fetch('/api/payway/purchase', {
     method: 'POST',
+    credentials: 'same-origin',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ amount }),
   });
   return res.json();
 }
 export default createKhqrTransaction;
+`,
+              map: null,
+            };
+          }
+          if (!options?.ssr && (id.endsWith('/app/actions/telegram.js') || id.endsWith('/actions/telegram.js'))) {
+            return {
+              code: `
+export async function sendPaymentTelegramNotification(payload) {
+  const res = await fetch('/api/send-telegram', {
+    method: 'POST',
+    credentials: 'same-origin',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload || {}),
+  });
+  return res.json();
+}
+export default sendPaymentTelegramNotification;
 `,
               map: null,
             };

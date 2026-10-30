@@ -389,17 +389,7 @@ export const LessonModal: React.FC<LessonModalProps> = ({ lesson, onClose, onOpe
     const query = (customPrompt || tutorInput).trim();
     if (!query || isTutorLoading || !lesson) return;
 
-    // Check credits for free tier
-    if (!isPremium && limmyAI_credits <= 0) {
-      openPremiumModal(
-        'Out of Limmy AI Credits',
-        'You have used all 5 free Limmy AI tutoring credits. Upgrade to Premium for unlimited 24/7 Socratic guidance across all 4 units!'
-      );
-      return;
-    }
-
-    const creditAllowed = await deductLimmyCredit();
-    if (!creditAllowed && !isPremium) return;
+    await deductLimmyCredit();
 
     const userMsg = { role: 'user' as const, content: query };
     setTutorMessages((prev) => [...prev, userMsg]);
@@ -545,15 +535,7 @@ export const LessonModal: React.FC<LessonModalProps> = ({ lesson, onClose, onOpe
 
           <button
             type="button"
-            onClick={() => {
-              if (!isPremium) {
-                openPremiumModal(
-                  'Advanced AP Free-Response Questions (FRQs)',
-                  'Multi-part FRQs with official College Board scoring rubrics, point breakdowns, and live KaTeX preview are reserved for Premium members.'
-                );
-              }
-              setActiveTab('frq');
-            }}
+            onClick={() => setActiveTab('frq')}
             className={`inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs font-bold border transition-colors cursor-pointer shrink-0 ${
               activeTab === 'frq'
                 ? 'bg-blue-600 text-white border-blue-700 shadow-2xs'
@@ -562,7 +544,6 @@ export const LessonModal: React.FC<LessonModalProps> = ({ lesson, onClose, onOpe
           >
             <FileText className="w-3.5 h-3.5" />
             <span>Practice Bank: FRQ ({frqList.length})</span>
-            {!isPremium && <Lock className="w-3 h-3 text-amber-500" />}
           </button>
 
           {/* Ask Teacher Limmy Floating / Docked Side-Drawer Toggle Button */}
@@ -1599,21 +1580,9 @@ export const LessonModal: React.FC<LessonModalProps> = ({ lesson, onClose, onOpe
                   <div>
                     <div className="flex items-center gap-1.5">
                       <div className="text-xs font-bold tracking-tight">Teacher Limmy</div>
-                      {isPremium ? (
-                        <span className="text-[9px] font-bold text-amber-300 bg-amber-500/20 border border-amber-400/40 px-1.5 py-0.2 rounded-full flex items-center gap-0.5">
-                          <Crown className="w-2.5 h-2.5" />
-                          <span>Premium</span>
-                        </span>
-                      ) : (
-                        <button
-                          type="button"
-                          onClick={() => openPremiumModal('Teacher Limmy Socratic Mentorship')}
-                          className="text-[9px] font-bold text-indigo-200 bg-indigo-500/30 hover:bg-indigo-500/50 border border-indigo-400/40 px-1.5 py-0.2 rounded-full flex items-center gap-0.5 cursor-pointer"
-                        >
-                          <Zap className="w-2.5 h-2.5 text-amber-400" />
-                          <span>{limmyAI_credits} credits</span>
-                        </button>
-                      )}
+                      <span className="text-[9px] font-bold text-emerald-300 bg-emerald-500/20 border border-emerald-400/40 px-1.5 py-0.2 rounded-full flex items-center gap-0.5">
+                        <span>Free &amp; Unlimited</span>
+                      </span>
                     </div>
                     <div className="text-[10px] text-blue-300 font-mono">Lesson Guidance • Topic {lesson.topicCode}</div>
                   </div>
@@ -1703,27 +1672,7 @@ export const LessonModal: React.FC<LessonModalProps> = ({ lesson, onClose, onOpe
                 <div ref={tutorBottomRef} />
               </div>
 
-              {/* Zero credit warning for free users */}
-              {!isPremium && limmyAI_credits <= 0 && (
-                <div className="px-3 py-2 bg-amber-50 border-t border-amber-200 flex items-center justify-between text-[11px] text-amber-950 shrink-0">
-                  <div className="flex items-center gap-1.5">
-                    <Zap className="w-3.5 h-3.5 text-amber-600 fill-amber-500" />
-                    <span>0 free AI prompts remaining</span>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() =>
-                      openPremiumModal(
-                        'Unlimited Teacher Limmy Guidance',
-                        'Upgrade to MathPrep Premium for unlimited AI tutoring and error breakdowns.'
-                      )
-                    }
-                    className="font-bold text-indigo-700 hover:underline cursor-pointer"
-                  >
-                    Upgrade →
-                  </button>
-                </div>
-              )}
+              {/* Upgrade prompt hidden while platform is 100% free */}
 
               {/* Input Box */}
               <form

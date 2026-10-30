@@ -20,6 +20,7 @@ import {
   where,
   setDoc,
 } from 'firebase/firestore';
+import { stripHtmlTags, sanitizeEmail, sanitizeId } from '../utils/sanitize';
 
 export interface PaymentSubmission {
   id: string;
@@ -301,7 +302,14 @@ export function AdminPaymentApprovals() {
     }
   };
 
-  const handleModifyUserPremium = async (targetEmail: string, targetUid: string, grantDays: number | null) => {
+  const handleModifyUserPremium = async (rawTargetEmail: string, rawTargetUid: string, grantDays: number | null) => {
+    const targetEmail = sanitizeEmail(rawTargetEmail);
+    const targetUid = sanitizeId(rawTargetUid, 128);
+    if (!targetEmail) {
+      showToast('Invalid email address provided.', 'error');
+      return;
+    }
+
     const isGranting = grantDays !== null;
     setProcessingId(targetUid || targetEmail);
     try {
@@ -321,7 +329,7 @@ export function AdminPaymentApprovals() {
         id: cleanId,
         uid: cleanId,
         email: targetEmail,
-        displayName: targetEmail.split('@')[0],
+        displayName: stripHtmlTags(targetEmail.split('@')[0], 100),
         isPremium: isGranting,
         subscription_end_date: endDateIso,
         limmyAI_credits: isGranting ? 9999 : 50,

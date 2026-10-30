@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useAuth } from '@/src/context/AuthContext';
 import {
   db,
@@ -10,7 +10,10 @@ import {
   markWriteQuotaExhausted,
 } from '@/src/firebase';
 import { doc, setDoc } from 'firebase/firestore';
-import { sendPaymentTelegramNotification } from '../actions/telegram';
+import { stripHtmlTags, sanitizeEmail, sanitizeId } from '@/src/utils/sanitize';
+
+const CHECKOUT_DEBOUNCE_COOLDOWN_MS = 30 * 1000; // 30 seconds proxy-safe cooldown
+const CHECKOUT_LAST_TS_STORAGE_KEY = 'mathprep_last_checkout_submit_ts';
 
 export default function CheckoutPage() {
   const { currentUser, isPremium, setAuthModalOpen, setAuthModalTab } = useAuth();
@@ -18,10 +21,50 @@ export default function CheckoutPage() {
   const [submitted, setSubmitted] = useState(false);
   const [submissionId, setSubmissionId] = useState('');
   const [error, setError] = useState('');
+  const [cooldownSeconds, setCooldownSeconds] = useState(0);
+
+  // Synchronous client-side debounce ref to block rapid double/triple clicks immediately
+  const lastSubmitTimestampRef = useRef(0);
+
+  // Restore any active cooldown timer from sessionStorage on mount
+  useEffect(() => {
+    try {
+      const savedTs = Number(sessionStorage.getItem(CHECKOUT_LAST_TS_STORAGE_KEY) || '0');
+      if (savedTs > 0) {
+        const elapsed = Date.now() - savedTs;
+        if (elapsed < CHECKOUT_DEBOUNCE_COOLDOWN_MS) {
+          lastSubmitTimestampRef.current = savedTs;
+          setCooldownSeconds(Math.ceil((CHECKOUT_DEBOUNCE_COOLDOWN_MS - elapsed) / 1000));
+        }
+      }
+    } catch (_e) {}
+  }, []);
+
+  // Tick down the client-side debounce cooldown timer
+  useEffect(() => {
+    if (cooldownSeconds <= 0) return;
+    const timer = setInterval(() => {
+      setCooldownSeconds((prev) => (prev > 1 ? prev - 1 : 0));
+    }, 1000);
+    return () => clearInterval(timer);
+  }, [cooldownSeconds]);
 
   const handleSubmitPayment = async (e) => {
     e.preventDefault();
     setError('');
+
+    // 1. Synchronous client-side debounce & cooldown check (Proxy-Safe Spam Protection)
+    const now = Date.now();
+    const elapsedSinceLast = now - lastSubmitTimestampRef.current;
+    if (submitting || cooldownSeconds > 0 || elapsedSinceLast < CHECKOUT_DEBOUNCE_COOLDOWN_MS) {
+      const waitSec =
+        cooldownSeconds > 0
+          ? cooldownSeconds
+          : Math.max(1, Math.ceil((CHECKOUT_DEBOUNCE_COOLDOWN_MS - elapsedSinceLast) / 1000));
+      setCooldownSeconds(waitSec);
+      setError(`Please wait ${waitSec} seconds before submitting another payment claim.`);
+      return;
+    }
 
     if (!currentUser) {
       setError('You must sign in or create an account before submitting a payment.');
@@ -30,37 +73,77 @@ export default function CheckoutPage() {
       return;
     }
 
-    const targetEmail = currentUser.email;
-    if (!targetEmail) {
-      setError('No email address associated with your account.');
+    // 2. Sanitize user inputs & identifiers (Anti-XSS)
+    const cleanEmail = sanitizeEmail(currentUser.email);
+    const cleanUserId = sanitizeId(currentUser.uid, 128);
+
+    if (!cleanEmail || !cleanUserId) {
+      setError('No valid email address is associated with your authenticated account.');
       return;
     }
 
+    // Lock timestamp immediately before async operations begin
+    lastSubmitTimestampRef.current = now;
+    try {
+      sessionStorage.setItem(CHECKOUT_LAST_TS_STORAGE_KEY, String(now));
+    } catch (_e) {}
+    setCooldownSeconds(Math.ceil(CHECKOUT_DEBOUNCE_COOLDOWN_MS / 1000));
     setSubmitting(true);
 
     try {
-      const newSubId = `sub_${Date.now()}`;
-      const submissionData = {
-        id: newSubId,
-        user_id: currentUser.uid,
-        user_email: targetEmail,
+      const newSubId = sanitizeId(`sub_${now}`, 64);
+      const cleanAmount = stripHtmlTags('$10.00', 32);
+      const createdAtIso = new Date(now).toISOString();
+
+      // Firestore-compliant sanitized document (matches firestore.rules isValidPaymentSubmission)
+      const firestoreSubmissionData = {
+        user_id: cleanUserId,
+        user_email: cleanEmail,
         status: 'pending',
-        amount: '$10.00',
-        created_at: new Date().toISOString(),
+        amount: cleanAmount,
+        created_at: createdAtIso,
       };
 
-      // 1. Always save locally first so Admin Console sees it immediately even if Firestore daily quota is exhausted
+      const localSubmissionRecord = {
+        id: newSubId,
+        ...firestoreSubmissionData,
+      };
+
+      // 3. Verify with server-side timestamp check & dispatch Telegram alert first
+      const response = await fetch('/api/send-telegram', {
+        method: 'POST',
+        credentials: 'same-origin',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          submissionId: newSubId,
+          userEmail: cleanEmail,
+          userId: cleanUserId,
+          amount: cleanAmount,
+          clientTimestamp: now,
+        }),
+      });
+
+      const result = await response.json().catch(() => ({}));
+
+      if (response.status === 429) {
+        const serverWait = Number(result?.cooldownSeconds) || 30;
+        setCooldownSeconds(serverWait);
+        setError(result?.error || `Please wait ${serverWait} seconds before submitting another payment claim.`);
+        return;
+      }
+
+      // 4. Save sanitized record locally for the current user's session / Admin review fallback
       try {
         const prevSubs = JSON.parse(localStorage.getItem('mathprep_local_payment_submissions') || '[]');
-        prevSubs.unshift(submissionData);
+        prevSubs.unshift(localSubmissionRecord);
         localStorage.setItem('mathprep_local_payment_submissions', JSON.stringify(prevSubs.slice(0, 100)));
       } catch (_e) {}
 
-      // 2. Save payment claim record to Firestore collection 'payment_submissions' if write quota is available
+      // 5. Save sanitized payment claim to Firestore collection 'payment_submissions' if write quota is available
       if (!isWriteQuotaExhausted() && !isReadQuotaExhausted()) {
         try {
           await Promise.race([
-            setDoc(doc(db, 'payment_submissions', newSubId), submissionData),
+            setDoc(doc(db, 'payment_submissions', newSubId), firestoreSubmissionData),
             new Promise((_, reject) => setTimeout(() => reject(new Error('quota-timeout')), 2500)),
           ]);
         } catch (fsErr) {
@@ -71,33 +154,9 @@ export default function CheckoutPage() {
       }
 
       setSubmissionId(newSubId);
-
-      // 3. Trigger Telegram sendMessage text alert to store owner
-      try {
-        await fetch('/api/send-telegram', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            submissionId: newSubId,
-            userEmail: targetEmail,
-            userId: currentUser.uid,
-            amount: '$10.00',
-          }),
-        });
-
-        await sendPaymentTelegramNotification({
-          submissionId: newSubId,
-          userEmail: targetEmail,
-          userId: currentUser.uid,
-          amount: '$10.00',
-        });
-      } catch (_telegramErr) {
-        // Non-blocking if Telegram webhook is unreachable
-      }
-
       setSubmitted(true);
     } catch (err) {
-      setError(err?.message || 'Failed to submit payment claim. Please try again.');
+      setError(stripHtmlTags(err?.message || 'Failed to submit payment claim. Please try again.', 200));
     } finally {
       setSubmitting(false);
     }
@@ -179,7 +238,7 @@ export default function CheckoutPage() {
             </div>
           ) : (
             <>
-              {/* Logged in Account Banner */}
+              {/* Logged in Account Banner (Strictly current authenticated user only) */}
               <div className="p-3 bg-blue-50/80 border border-blue-200/90 rounded-xl text-xs text-blue-900 flex items-center justify-between gap-2">
                 <span className="flex items-center gap-1.5 font-medium truncate">
                   <span className="shrink-0">👤 Signed in:</span>
@@ -260,7 +319,7 @@ export default function CheckoutPage() {
                     </div>
                   </div>
 
-                  {/* Touch-Friendly Single Submission Form */}
+                  {/* Touch-Friendly Single Submission Form with Debounce Cooldown */}
                   <form onSubmit={handleSubmitPayment} className="space-y-4">
                     {error && (
                       <div className="p-3.5 rounded-xl bg-rose-50 border border-rose-200 text-rose-800 text-xs font-semibold">
@@ -271,7 +330,7 @@ export default function CheckoutPage() {
                     {/* Prominent Touch-Friendly Button with Ample Padding */}
                     <button
                       type="submit"
-                      disabled={submitting}
+                      disabled={submitting || cooldownSeconds > 0}
                       className="w-full min-h-[52px] py-4 px-6 bg-gradient-to-r from-emerald-600 via-teal-600 to-emerald-700 hover:from-emerald-700 hover:to-teal-800 active:scale-[0.98] focus:ring-4 focus:ring-emerald-300 text-white font-extrabold text-sm sm:text-base rounded-xl sm:rounded-2xl shadow-md hover:shadow-lg transition-all flex items-center justify-center gap-2.5 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
                     >
                       {submitting ? (
@@ -279,6 +338,8 @@ export default function CheckoutPage() {
                           <span className="w-5 h-5 rounded-full border-2 border-white border-t-transparent animate-spin"></span>
                           <span>Notifying Admin...</span>
                         </>
+                      ) : cooldownSeconds > 0 ? (
+                        <span>Please wait {cooldownSeconds}s before resubmitting</span>
                       ) : (
                         <span className="flex items-center gap-2">
                           <span>I have transferred $10</span>

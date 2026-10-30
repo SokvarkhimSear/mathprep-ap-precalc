@@ -312,14 +312,14 @@ function setupAuthListeners() {
   authInstance.onAuthStateChanged((user) => {
     currentUser = user;
 
+    // Platform temporarily 100% free & unlocked for all users
+    window.mathprepIsPremium = true;
+    window.mathprepLimmyCredits = 9999;
+
     if (user) {
       // 1. Admin Identification Check (Requirement 1)
       const userEmail = (user.email || '').trim().toLowerCase();
       isAdmin = userEmail === ADMIN_EMAIL.toLowerCase();
-      if (isAdmin || userEmail === 'meyjingstudy88@gmail.com') {
-        window.mathprepIsPremium = true;
-        window.mathprepLimmyCredits = 9999;
-      }
 
       // Reveal or hide Admin Studio Link
       updateAdminNavigationUI(isAdmin);

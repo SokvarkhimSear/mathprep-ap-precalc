@@ -195,13 +195,6 @@ export const ProgressTrackerPage: React.FC<ProgressTrackerPageProps> = ({
     .slice(0, 3);
 
   const handleLaunchWeaknessDrill = (targetSubTopicOrTopicId?: string) => {
-    if (!isPremium) {
-      openPremiumModal(
-        'Targeted Weakness Remediation Drills',
-        'AI-guided drills targeting your specific missed questions, error diagnostics, and struggling topics are reserved for Premium members.'
-      );
-      return;
-    }
     const win = window as unknown as {
       launchTargetedWeaknessDrill?: (id?: string | null) => void;
     };
@@ -359,36 +352,12 @@ export const ProgressTrackerPage: React.FC<ProgressTrackerPageProps> = ({
               onClick={() => handleLaunchWeaknessDrill()}
               className="px-5 py-3 rounded-2xl bg-slate-900 hover:bg-slate-800 text-white font-extrabold text-xs sm:text-sm shadow-md transition-all cursor-pointer flex items-center justify-center gap-2 shrink-0"
             >
-              {isPremium ? (
-                <>
-                  <Sparkles className="w-4 h-4 text-amber-400" />
-                  <span>⚡ Targeted Drill: Fix My Weak Spots</span>
-                </>
-              ) : (
-                <>
-                  <Lock className="w-4 h-4 text-amber-400" />
-                  <span>⚡ Targeted Weakness Drill (Premium)</span>
-                </>
-              )}
+              <Sparkles className="w-4 h-4 text-amber-400" />
+              <span>⚡ Targeted Drill: Fix My Weak Spots</span>
             </button>
           </div>
 
-          {!isPremium && (
-            <div className="mt-4 p-3.5 bg-gradient-to-r from-amber-500/15 via-orange-500/15 to-indigo-500/15 border border-amber-300/90 rounded-2xl flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-amber-950">
-              <div className="flex items-center gap-2">
-                <Crown className="w-4 h-4 text-amber-600 shrink-0" />
-                <span>
-                  <strong>Personalized Weakness Remediation:</strong> Isolates your exact distractor traps and generates customized remedial practice sets.
-                </span>
-              </div>
-              <a
-                href="/checkout"
-                className="px-3.5 py-1.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-amber-300 font-bold whitespace-nowrap shadow-xs"
-              >
-                Upgrade ($10) →
-              </a>
-            </div>
-          )}
+          {/* Upgrade to Premium banner temporarily hidden while platform is 100% free */}
 
           {weakSubTopics.length > 0 ? (
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-5">

@@ -63,17 +63,7 @@ export const LimmyChatDrawer: React.FC<LimmyChatDrawerProps> = ({
     const text = (textToSend || input).trim();
     if (!text || isLoading) return;
 
-    // Check credits for free tier
-    if (!isPremium && limmyAI_credits <= 0) {
-      openPremiumModal(
-        'Out of Limmy AI Credits',
-        'You have used all 5 free Limmy AI tutoring credits. Upgrade to Premium for unlimited 24/7 Socratic guidance across all 4 units!'
-      );
-      return;
-    }
-
-    const creditAllowed = await deductLimmyCredit();
-    if (!creditAllowed && !isPremium) return;
+    await deductLimmyCredit();
 
     const userMessage: ChatMessage = {
       id: `user-${Date.now()}`,
@@ -166,26 +156,9 @@ export const LimmyChatDrawer: React.FC<LimmyChatDrawerProps> = ({
                 <span className="text-[10px] font-semibold text-blue-700 bg-blue-100/80 px-1.5 py-0.5 rounded">
                   Socratic Tutor
                 </span>
-                {isPremium ? (
-                  <span className="inline-flex items-center gap-1 text-[10px] font-bold text-amber-800 bg-amber-100 border border-amber-300 px-2 py-0.5 rounded-full">
-                    <Crown className="w-3 h-3 text-amber-600" />
-                    <span>Unlimited Premium</span>
-                  </span>
-                ) : (
-                  <button
-                    type="button"
-                    onClick={() =>
-                      openPremiumModal(
-                        'Unlimited Limmy AI Tutoring',
-                        'Upgrade to Premium for unlimited 24/7 Socratic guidance, error diagnostics, and step-by-step mathematical derivations.'
-                      )
-                    }
-                    className="inline-flex items-center gap-1 text-[10px] font-bold text-indigo-700 bg-indigo-50 hover:bg-indigo-100 border border-indigo-200 px-2 py-0.5 rounded-full cursor-pointer transition-colors"
-                  >
-                    <Zap className="w-3 h-3 text-amber-500 fill-amber-500" />
-                    <span>{limmyAI_credits} Free Credits • Upgrade</span>
-                  </button>
-                )}
+                <span className="inline-flex items-center gap-1 text-[10px] font-bold text-emerald-800 bg-emerald-100 border border-emerald-300 px-2 py-0.5 rounded-full">
+                  <span>Free &amp; Unlimited</span>
+                </span>
               </div>
               <p className="text-xs text-slate-500 mt-1">
                 Powered by DeepSeek · Progressive hints only
@@ -285,27 +258,7 @@ export const LimmyChatDrawer: React.FC<LimmyChatDrawerProps> = ({
           </div>
         )}
 
-        {/* Out of Credits Alert Banner */}
-        {!isPremium && limmyAI_credits <= 0 && (
-          <div className="px-4 py-2.5 bg-gradient-to-r from-amber-50 to-indigo-50 border-t border-amber-200/90 flex items-center justify-between text-xs text-slate-800 shrink-0">
-            <div className="flex items-center gap-2">
-              <Zap className="w-4 h-4 text-amber-600 fill-amber-500 shrink-0" />
-              <span className="font-medium text-slate-900">You've reached your 5 free AI prompts.</span>
-            </div>
-            <button
-              type="button"
-              onClick={() =>
-                openPremiumModal(
-                  'Unlimited Limmy AI Tutoring',
-                  'Upgrade to MathPrep Premium ($10) for unlimited 24/7 Socratic guidance across all 4 units!'
-                )
-              }
-              className="font-bold text-indigo-700 hover:text-indigo-900 hover:underline cursor-pointer ml-2 shrink-0"
-            >
-              Upgrade →
-            </button>
-          </div>
-        )}
+        {/* Upgrade banner hidden while platform is 100% free */}
 
         {/* Input Form */}
         <div className="p-3.5 border-t border-slate-200 bg-white shrink-0">

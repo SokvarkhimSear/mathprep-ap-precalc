@@ -218,15 +218,33 @@ export async function fetchStudentProgress(userId: string): Promise<StudentProgr
 }
 
 export async function saveStudentProgress(userId: string, progress: Partial<StudentProgress>): Promise<void> {
-  const localKey = `mathprep_progress_${userId}`;
+  const cleanUserId = String(userId || '').replace(/[^a-zA-Z0-9_\-]/g, '').slice(0, 128);
+  if (!cleanUserId) return;
+
+  const sanitizeList = (arr?: string[]) =>
+    Array.isArray(arr)
+      ? arr
+          .map((item) => String(item || '').replace(/<[^>]*>/g, '').replace(/[<>]/g, '').trim().slice(0, 64))
+          .filter(Boolean)
+          .slice(0, 100)
+      : undefined;
+
+  const sanitizedCompleted = sanitizeList(progress.completedLessons);
+  const sanitizedBookmarks = sanitizeList(progress.bookmarkedFormulas);
+  const sanitizedMinutes =
+    typeof progress.totalStudyMinutes === 'number' && Number.isFinite(progress.totalStudyMinutes)
+      ? Math.max(0, Math.round(progress.totalStudyMinutes))
+      : undefined;
+
+  const localKey = `mathprep_progress_${cleanUserId}`;
   try {
     const prevRaw = localStorage.getItem(localKey);
     const prev = prevRaw ? JSON.parse(prevRaw) : {};
     const merged: StudentProgress = {
-      userId,
-      completedLessons: progress.completedLessons ?? prev.completedLessons ?? [],
-      bookmarkedFormulas: progress.bookmarkedFormulas ?? prev.bookmarkedFormulas ?? [],
-      totalStudyMinutes: progress.totalStudyMinutes ?? prev.totalStudyMinutes ?? 0,
+      userId: cleanUserId,
+      completedLessons: sanitizedCompleted ?? prev.completedLessons ?? [],
+      bookmarkedFormulas: sanitizedBookmarks ?? prev.bookmarkedFormulas ?? [],
+      totalStudyMinutes: sanitizedMinutes ?? prev.totalStudyMinutes ?? 0,
       lastActiveAt: new Date().toISOString(),
     };
     localStorage.setItem(localKey, JSON.stringify(merged));
@@ -237,15 +255,15 @@ export async function saveStudentProgress(userId: string, progress: Partial<Stud
   }
 
   try {
-    await setDoc(
-      doc(db, 'users', userId, 'progress', 'main'),
-      {
-        ...progress,
-        userId,
-        lastActiveAt: new Date().toISOString(),
-      },
-      { merge: true }
-    );
+    const payload: Record<string, any> = {
+      userId: cleanUserId,
+      lastActiveAt: new Date().toISOString(),
+    };
+    if (sanitizedCompleted !== undefined) payload.completedLessons = sanitizedCompleted;
+    if (sanitizedBookmarks !== undefined) payload.bookmarkedFormulas = sanitizedBookmarks;
+    if (sanitizedMinutes !== undefined) payload.totalStudyMinutes = sanitizedMinutes;
+
+    await setDoc(doc(db, 'users', cleanUserId, 'progress', 'main'), payload, { merge: true });
   } catch (err: any) {
     if (isQuotaError(err)) {
       markWriteQuotaExhausted();
@@ -257,14 +275,25 @@ export async function saveExamAttempt(
   userId: string,
   attempt: { examId: string; score: number; totalQuestions: number; percentage: number }
 ): Promise<void> {
+  const cleanUserId = String(userId || '').replace(/[^a-zA-Z0-9_\-]/g, '').slice(0, 128);
+  const cleanExamId = String(attempt.examId || '').replace(/<[^>]*>/g, '').replace(/[^a-zA-Z0-9_\-.]/g, '').slice(0, 64);
+  if (!cleanUserId || !cleanExamId) return;
+
+  const safeScore = Math.max(0, Number(attempt.score) || 0);
+  const safeTotal = Math.max(1, Number(attempt.totalQuestions) || 1);
+  const safePct = Math.min(100, Math.max(0, Number(attempt.percentage) || 0));
+
   const attemptId = `attempt_${Date.now()}`;
   try {
-    const localAttemptsKey = `mathprep_attempts_${userId}`;
+    const localAttemptsKey = `mathprep_attempts_${cleanUserId}`;
     const prev = JSON.parse(localStorage.getItem(localAttemptsKey) || '[]');
     prev.unshift({
       id: attemptId,
-      userId,
-      ...attempt,
+      userId: cleanUserId,
+      examId: cleanExamId,
+      score: safeScore,
+      totalQuestions: safeTotal,
+      percentage: safePct,
       completedAt: new Date().toISOString(),
     });
     localStorage.setItem(localAttemptsKey, JSON.stringify(prev.slice(0, 50)));
@@ -275,12 +304,12 @@ export async function saveExamAttempt(
   }
 
   try {
-    await setDoc(doc(db, 'users', userId, 'attempts', attemptId), {
-      userId,
-      examId: attempt.examId,
-      score: attempt.score,
-      totalQuestions: attempt.totalQuestions,
-      percentage: attempt.percentage,
+    await setDoc(doc(db, 'users', cleanUserId, 'attempts', attemptId), {
+      userId: cleanUserId,
+      examId: cleanExamId,
+      score: safeScore,
+      totalQuestions: safeTotal,
+      percentage: safePct,
       completedAt: new Date().toISOString(),
     });
   } catch (err: any) {

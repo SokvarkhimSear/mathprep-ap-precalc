@@ -20,6 +20,7 @@ import {
   ALWAYS_PREMIUM_EMAILS,
 } from '../firebase';
 import { doc, setDoc, updateDoc, onSnapshot } from 'firebase/firestore';
+import { stripHtmlTags, sanitizeEmail, sanitizeId } from '../utils/sanitize';
 
 interface AuthContextType {
   currentUser: User | null;
@@ -57,10 +58,12 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 function getLocalUserProfile(uid: string, email: string | null) {
   try {
-    const raw = localStorage.getItem(`mathprep_user_profile_${uid}`);
+    const cleanUid = sanitizeId(uid, 128);
+    const raw = localStorage.getItem(`mathprep_user_profile_${cleanUid}`);
     if (raw) return JSON.parse(raw);
     if (email) {
-      const byEmail = localStorage.getItem(`mathprep_user_profile_email_${email.toLowerCase()}`);
+      const cleanMail = sanitizeEmail(email);
+      const byEmail = localStorage.getItem(`mathprep_user_profile_email_${cleanMail}`);
       if (byEmail) return JSON.parse(byEmail);
     }
   } catch {}
@@ -69,41 +72,19 @@ function getLocalUserProfile(uid: string, email: string | null) {
 
 function saveLocalUserProfile(uid: string, email: string | null, data: Record<string, any>) {
   try {
-    localStorage.setItem(`mathprep_user_profile_${uid}`, JSON.stringify(data));
-    if (email) {
-      localStorage.setItem(`mathprep_user_profile_email_${email.toLowerCase()}`, JSON.stringify(data));
+    const cleanUid = sanitizeId(uid, 128);
+    const cleanMail = sanitizeEmail(email || data.email || '');
+    const sanitizedData = {
+      ...data,
+      uid: cleanUid,
+      email: cleanMail,
+      ...(data.displayName ? { displayName: stripHtmlTags(data.displayName, 100) } : {}),
+    };
+    // Anti-doxxing: Only store the currently authenticated user's own profile in client storage
+    localStorage.setItem(`mathprep_user_profile_${cleanUid}`, JSON.stringify(sanitizedData));
+    if (cleanMail) {
+      localStorage.setItem(`mathprep_user_profile_email_${cleanMail}`, JSON.stringify(sanitizedData));
     }
-    // Also maintain a local directory of known users for the Admin Console when Firestore quota is reached
-    const rawList = localStorage.getItem('mathprep_local_users_directory');
-    const dir: Record<string, any> = rawList ? JSON.parse(rawList) : {};
-    const key = (email || uid).toLowerCase();
-    dir[key] = { ...(dir[key] || {}), ...data, uid, email: email || data.email || '' };
-    localStorage.setItem('mathprep_local_users_directory', JSON.stringify(dir));
-  } catch {}
-}
-
-function seedGuaranteedPremiumProfiles() {
-  try {
-    const rawList = localStorage.getItem('mathprep_local_users_directory');
-    const dir: Record<string, any> = rawList ? JSON.parse(rawList) : {};
-    ALWAYS_PREMIUM_EMAILS.forEach((email) => {
-      const key = email.toLowerCase();
-      const existing = dir[key] || {};
-      const cleanId = existing.uid || existing.id || key.replace(/[^a-zA-Z0-9_\-]/g, '_');
-      const profile = {
-        ...existing,
-        id: cleanId,
-        uid: cleanId,
-        email: key,
-        displayName: existing.displayName || (key === 'searsokvarkhim1@gmail.com' ? 'searsokvarkhim1 (Admin)' : key.split('@')[0]),
-        isPremium: true,
-        limmyAI_credits: 9999,
-        updatedAt: existing.updatedAt || new Date().toISOString(),
-      };
-      dir[key] = profile;
-      localStorage.setItem(`mathprep_user_profile_email_${key}`, JSON.stringify(profile));
-    });
-    localStorage.setItem('mathprep_local_users_directory', JSON.stringify(dir));
   } catch {}
 }
 
@@ -112,8 +93,9 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const [loading, setLoading] = useState(true);
   const [emailVerified, setEmailVerified] = useState(false);
   const [isGoogleUser, setIsGoogleUser] = useState(false);
-  const [isPremium, setIsPremium] = useState<boolean>(false);
-  const [limmyAI_credits, setLimmyCredits] = useState<number>(5);
+  // Platform temporarily 100% free & unlocked for all users (payment schemas preserved dormant)
+  const [isPremium, setIsPremium] = useState<boolean>(true);
+  const [limmyAI_credits, setLimmyCredits] = useState<number>(9999);
   const [premiumModalOpen, setPremiumModalOpen] = useState(false);
   const [premiumModalFeature, setPremiumModalFeature] = useState<{ title: string; description: string }>({
     title: 'AP Precalculus Premium Feature',
@@ -126,60 +108,23 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const [verificationModalNotification, setVerificationModalNotification] = useState<string | null>(null);
 
   useEffect(() => {
-    seedGuaranteedPremiumProfiles();
-  }, []);
-
-  useEffect(() => {
-    (window as any).mathprepIsPremium = isPremium;
-    (window as any).mathprepLimmyCredits = limmyAI_credits;
+    (window as any).mathprepIsPremium = true;
+    (window as any).mathprepLimmyCredits = 9999;
   }, [isPremium, limmyAI_credits]);
 
   const openPremiumModal = (title?: string, description?: string) => {
-    setPremiumModalFeature({
-      title: title || 'AP Precalculus Premium Feature',
-      description: description || 'Upgrade to MathPrep Premium to unlock this feature and achieve a 5 on your AP exam.',
-    });
-    setPremiumModalOpen(true);
+    // Dormant while platform is 100% free for all users:
+    // setPremiumModalFeature({
+    //   title: title || 'AP Precalculus Premium Feature',
+    //   description: description || 'Upgrade to MathPrep Premium to unlock this feature and achieve a 5 on your AP exam.',
+    // });
+    // setPremiumModalOpen(true);
+    void title;
+    void description;
   };
 
   const deductLimmyCredit = async (): Promise<boolean> => {
-    if (isPremium) return true;
-
-    if (limmyAI_credits <= 0) {
-      openPremiumModal(
-        'Out of Limmy AI Credits',
-        'You have used all 5 free Limmy AI tutoring prompts. Upgrade to Premium for unlimited 24/7 Socratic guidance!'
-      );
-      return false;
-    }
-
-    const nextCredits = Math.max(0, limmyAI_credits - 1);
-    setLimmyCredits(nextCredits);
-
-    if (currentUser) {
-      const cached = getLocalUserProfile(currentUser.uid, currentUser.email) || {};
-      saveLocalUserProfile(currentUser.uid, currentUser.email, {
-        ...cached,
-        uid: currentUser.uid,
-        email: currentUser.email || '',
-        limmyAI_credits: nextCredits,
-        updatedAt: new Date().toISOString(),
-      });
-
-      if (!isWriteQuotaExhausted() && !isReadQuotaExhausted()) {
-        try {
-          const userDocRef = doc(db, 'users', currentUser.uid);
-          await updateDoc(userDocRef, {
-            limmyAI_credits: nextCredits,
-            updatedAt: new Date().toISOString(),
-          });
-        } catch (e) {
-          if (isQuotaError(e)) {
-            markWriteQuotaExhausted();
-          }
-        }
-      }
-    }
+    // All users temporarily receive unlimited free AI tutoring prompts
     return true;
   };
 
@@ -211,9 +156,11 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         const isGuaranteedPremium = isAlwaysPremiumEmail(user.email);
         const localProfile = getLocalUserProfile(user.uid, user.email);
 
+        // Unlock all features for every user while keeping profile schema intact
+        setIsPremium(true);
+        setLimmyCredits(9999);
+
         if (isGuaranteedPremium) {
-          setIsPremium(true);
-          setLimmyCredits(9999);
           saveLocalUserProfile(user.uid, user.email, {
             uid: user.uid,
             email: user.email || '',
@@ -222,16 +169,13 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             limmyAI_credits: 9999,
             updatedAt: new Date().toISOString(),
           });
-        } else if (localProfile) {
-          setIsPremium(Boolean(localProfile.isPremium));
-          setLimmyCredits(typeof localProfile.limmyAI_credits === 'number' ? localProfile.limmyAI_credits : 5);
-        } else {
+        } else if (!localProfile) {
           saveLocalUserProfile(user.uid, user.email, {
             uid: user.uid,
             email: user.email || '',
             displayName: user.displayName || user.email?.split('@')[0] || 'Student',
-            isPremium: false,
-            limmyAI_credits: 5,
+            isPremium: true,
+            limmyAI_credits: 9999,
             createdAt: new Date().toISOString(),
             updatedAt: new Date().toISOString(),
           });
@@ -249,20 +193,14 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             (docSnap) => {
               if (docSnap.exists()) {
                 const data = docSnap.data();
-                const resolvedPremium = isGuaranteedPremium || Boolean(data?.isPremium);
-                const resolvedCredits = isGuaranteedPremium
-                  ? 9999
-                  : typeof data?.limmyAI_credits === 'number'
-                  ? data.limmyAI_credits
-                  : 5;
-                setIsPremium(resolvedPremium);
-                setLimmyCredits(resolvedCredits);
+                setIsPremium(true);
+                setLimmyCredits(9999);
                 saveLocalUserProfile(user.uid, user.email, {
                   ...data,
                   uid: user.uid,
                   email: user.email || data?.email || '',
-                  isPremium: resolvedPremium,
-                  limmyAI_credits: resolvedCredits,
+                  isPremium: true,
+                  limmyAI_credits: 9999,
                 });
                 if (isGuaranteedPremium && !data?.isPremium && !isWriteQuotaExhausted()) {
                   updateDoc(userDocRef, {
@@ -275,9 +213,9 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
                 }
               } else if (!docSnap.metadata.fromCache && !isWriteQuotaExhausted()) {
                 const defaultProfile = {
-                  uid: user.uid,
-                  email: user.email || '',
-                  displayName: user.displayName || user.email?.split('@')[0] || 'Student',
+                  uid: sanitizeId(user.uid, 128),
+                  email: sanitizeEmail(user.email || ''),
+                  displayName: stripHtmlTags(user.displayName || user.email?.split('@')[0] || 'Student', 100),
                   targetScore: 5,
                   isPremium: isGuaranteedPremium ? true : Boolean(localProfile?.isPremium),
                   limmyAI_credits: isGuaranteedPremium ? 9999 : (localProfile?.limmyAI_credits ?? 5),
@@ -296,12 +234,8 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
               if (isQuotaError(err)) {
                 markReadQuotaExhausted();
               }
-              if (isGuaranteedPremium) {
-                setIsPremium(true);
-                setLimmyCredits(9999);
-              } else if (localProfile) {
-                setIsPremium(Boolean(localProfile.isPremium));
-              }
+              setIsPremium(true);
+              setLimmyCredits(9999);
             }
           );
         }
@@ -310,8 +244,8 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
           unsubscribeProfile();
           unsubscribeProfile = null;
         }
-        setIsPremium(false);
-        setLimmyCredits(5);
+        setIsPremium(true);
+        setLimmyCredits(9999);
         setEmailVerified(false);
         setIsGoogleUser(false);
         setBannerDismissed(false);
@@ -532,11 +466,14 @@ export function showToast(message: string, type: 'success' | 'warning' | 'error'
 
   const toast = document.createElement('div');
   toast.className = `mathprep-toast toast-${type}`;
-  toast.innerHTML = `
-    <div class="toast-content">
-      <span>${message}</span>
-    </div>
-  `;
+
+  // Anti-XSS: Use safe DOM creation and textContent instead of innerHTML
+  const contentDiv = document.createElement('div');
+  contentDiv.className = 'toast-content';
+  const span = document.createElement('span');
+  span.textContent = stripHtmlTags(message, 300);
+  contentDiv.appendChild(span);
+  toast.appendChild(contentDiv);
 
   container.appendChild(toast);
 

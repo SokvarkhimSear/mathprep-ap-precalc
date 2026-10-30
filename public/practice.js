@@ -1161,7 +1161,7 @@ function renderPracticeHubDirectory() {
   unitKeys.forEach((uKey) => {
     const uMeta = UNIT_METADATA[uKey];
     if (!uMeta) return;
-    const isLockedUnit = uKey !== "unit_1" && !window.mathprepIsPremium;
+    const isLockedUnit = false;
     const unitTopics = Object.keys(TOPIC_TITLES)
       .filter((code) => getUnitIdForTopic(code) === uKey)
       .filter((code) => practiceState.filters.topic === "all" || practiceState.filters.topic === code)
@@ -1464,35 +1464,12 @@ function openPracticeLauncher(options = {}) {
     sourceLabel = UNIT_METADATA[uId]?.title || "Unit Practice";
   }
 
-  // Premium Tier Gate for Unit 2A+
-  const hasUnit2Plus = targetTopics.some((t) => getUnitIdForTopic(t) !== "unit_1");
-  if (hasUnit2Plus && !window.mathprepIsPremium) {
-    if (typeof window.openPremiumModal === "function") {
-      window.openPremiumModal(
-        "AP Precalculus Units 2A–4B Practice Bank",
-        "Practice question sets for Unit 2A, Unit 2B, Unit 3, Unit 4A, and Unit 4B are locked on the Free tier. Upgrade to MathPrep Premium for full access!"
-      );
-    }
-    return;
-  }
-
   const initialFormat =
     practiceState.filters.type === "MCQ"
       ? "MCQ"
       : practiceState.filters.type === "FRQ"
       ? "FRQ"
       : "both";
-
-  // Premium Tier Gate for FRQ
-  if (initialFormat === "FRQ" && !window.mathprepIsPremium) {
-    if (typeof window.openPremiumModal === "function") {
-      window.openPremiumModal(
-        "Advanced AP Free-Response Questions",
-        "Multi-part FRQs with official College Board scoring rubrics and model solutions are reserved for Premium members."
-      );
-    }
-    return;
-  }
 
   practiceState.launcher = {
     isOpen: true,
@@ -1552,17 +1529,17 @@ function renderPracticeLauncherModal() {
     {
       val: "MCQ",
       label: "🔘 Multiple-Choice (MCQ)",
-      badge: "Free & Premium"
+      badge: "Free Access"
     },
     {
       val: "FRQ",
       label: "🔘 Free-Response (FRQ)",
-      badge: !window.mathprepIsPremium ? "🔒 Premium Only" : null
+      badge: "Free Access"
     },
     {
       val: "both",
       label: "🔘 Both (MCQ + FRQ)",
-      badge: !window.mathprepIsPremium ? "🔒 Premium Only" : null
+      badge: "Free Access"
     }
   ];
 
@@ -2996,30 +2973,12 @@ window.resetPracticeHubFilters = function () {
 };
 
 window.togglePracticeUnitAccordion = function (unitKey) {
-  if (unitKey !== "unit_1" && !window.mathprepIsPremium) {
-    if (typeof window.openPremiumModal === "function") {
-      window.openPremiumModal(
-        "AP Precalculus Units 2–4 Practice Bank",
-        "Practice sets for Unit 2 (Exponential/Logarithmic), Unit 3 (Trigonometric/Polar), and Unit 4 (Parametric/Vectors/Matrices) are locked on the Free tier. Upgrade to MathPrep Premium for complete access!"
-      );
-    }
-    return;
-  }
   practiceState.expandedUnits[unitKey] = !practiceState.expandedUnits[unitKey];
   renderPracticeHubDirectory();
 };
 
 window.togglePracticeUnitSelection = function (unitKey, ev) {
   if (ev) ev.stopPropagation();
-  if (unitKey !== "unit_1" && !window.mathprepIsPremium) {
-    if (typeof window.openPremiumModal === "function") {
-      window.openPremiumModal(
-        "AP Precalculus Units 2–4 Practice Bank",
-        "Selecting and launching practice sets for Unit 2, 3, or 4 requires MathPrep Premium."
-      );
-    }
-    return;
-  }
   const unitTopics = Object.keys(TOPIC_TITLES).filter((code) => getUnitIdForTopic(code) === unitKey);
   const allSelected = unitTopics.every((c) => practiceState.selectedTopics.has(c));
   unitTopics.forEach((c) => {
@@ -3031,16 +2990,6 @@ window.togglePracticeUnitSelection = function (unitKey, ev) {
 };
 
 window.togglePracticeTopicCheckbox = function (topicCode, checked) {
-  const uId = getUnitIdForTopic(topicCode);
-  if (uId !== "unit_1" && !window.mathprepIsPremium) {
-    if (typeof window.openPremiumModal === "function") {
-      window.openPremiumModal(
-        "AP Precalculus Units 2A–4B Practice Bank",
-        "Topic " + topicCode + " requires MathPrep Premium to practice."
-      );
-    }
-    return;
-  }
   if (checked) practiceState.selectedTopics.add(String(topicCode));
   else practiceState.selectedTopics.delete(String(topicCode));
   renderPracticeHubDirectory();
@@ -3054,15 +3003,6 @@ window.clearPracticeTopicSelections = function () {
 };
 
 window.updateLauncherSetting = function (key, value) {
-  if (key === "questionType" && (value === "FRQ" || value === "both") && !window.mathprepIsPremium) {
-    if (typeof window.openPremiumModal === "function") {
-      window.openPremiumModal(
-        "Advanced AP Free-Response Questions",
-        "Multi-part FRQs with official College Board scoring rubrics, point breakdowns, and live KaTeX preview are reserved for Premium members."
-      );
-    }
-    return;
-  }
   practiceState.launcher[key] = value;
   renderPracticeLauncherModal();
 };
@@ -3605,23 +3545,7 @@ window.askArenaLimmyTutor = async function (qId, mode = "explain", followUpQuest
     (practiceState.allQuestions || []).find((item) => item.id === qId);
   if (!q) return;
 
-  // Free Tier Limmy AI Credit Check
-  if (!window.mathprepIsPremium) {
-    const credits = window.mathprepLimmyCredits ?? 5;
-    if (credits <= 0) {
-      if (typeof window.openPremiumModal === "function") {
-        window.openPremiumModal(
-          "Out of Limmy AI Credits",
-          "You have used all 5 free Limmy AI tutoring prompts. Upgrade to MathPrep Premium for unlimited 24/7 Socratic guidance across all 4 units!"
-        );
-      }
-      return;
-    }
-    if (typeof window.deductLimmyCredit === "function") {
-      const allowed = await window.deductLimmyCredit();
-      if (!allowed) return;
-    }
-  }
+  // All users receive 100% free & unlimited Socratic tutoring in the Practice Arena
 
   // If the student already selected an MCQ option in Study Mode and asks Limmy to Explain, mark it checked
   if (s.mode === "study" && q.type === "MCQ" && mode === "explain" && s.answers[q.id] !== undefined) {
@@ -3746,15 +3670,6 @@ window.askArenaLimmyTutor = async function (qId, mode = "explain", followUpQuest
  * weakest / struggling sub-topics or missed questions.
  */
 window.launchTargetedWeaknessDrill = function (specificSubTopicId = null) {
-  if (!window.mathprepIsPremium) {
-    if (typeof window.openPremiumModal === "function") {
-      window.openPremiumModal(
-        "Targeted Weakness Remediation Drills",
-        "AI-guided drills targeting your specific missed questions, error diagnostics, and struggling topics are reserved for Premium members."
-      );
-    }
-    return;
-  }
 
   const allQs = practiceState.allQuestions || [];
   if (allQs.length === 0) {
@@ -3835,19 +3750,6 @@ function bindPracticeHubEvents() {
   if (unitSel) {
     unitSel.addEventListener("change", (e) => {
       const uVal = e.target.value;
-      if (uVal !== "all" && uVal !== "unit_1" && !window.mathprepIsPremium) {
-        if (typeof window.openPremiumModal === "function") {
-          window.openPremiumModal(
-            "AP Precalculus Units 2–4 Practice Bank",
-            "Access to Unit 2 (Exponential/Logarithmic), Unit 3 (Trigonometric/Polar), and Unit 4 (Parametric/Vectors/Matrices) question banks is reserved for Premium members."
-          );
-        }
-        unitSel.value = "unit_1";
-        practiceState.filters.unit = "unit_1";
-        populateHubTopicDropdowns();
-        applyHubFiltersAndRender();
-        return;
-      }
       practiceState.filters.unit = uVal;
       if (uVal !== "all") {
         practiceState.expandedUnits[uVal] = true;
@@ -3882,15 +3784,6 @@ function bindPracticeHubEvents() {
   document.querySelectorAll("[data-practice-type]").forEach((btn) => {
     btn.addEventListener("click", () => {
       const typeVal = btn.getAttribute("data-practice-type") || "all";
-      if (typeVal === "FRQ" && !window.mathprepIsPremium) {
-        if (typeof window.openPremiumModal === "function") {
-          window.openPremiumModal(
-            "Advanced AP Free-Response Questions",
-            "Multi-part FRQs with official College Board scoring rubrics, point breakdowns, and live KaTeX preview are reserved for Premium members."
-          );
-        }
-        return;
-      }
       practiceState.filters.type = typeVal;
       applyHubFiltersAndRender();
     });
@@ -3913,15 +3806,6 @@ function bindPracticeHubEvents() {
   document.querySelectorAll("[data-practice-status]").forEach((btn) => {
     btn.addEventListener("click", () => {
       const statusVal = btn.getAttribute("data-practice-status") || "all";
-      if (statusVal === "missed" && !window.mathprepIsPremium) {
-        if (typeof window.openPremiumModal === "function") {
-          window.openPremiumModal(
-            "Personalized Weakness Remediation",
-            "Filtering by missed questions and targeted error diagnostics is reserved for Premium members. Upgrade to isolate and remediate your AP Precalc weaknesses."
-          );
-        }
-        return;
-      }
       practiceState.filters.status = statusVal;
       applyHubFiltersAndRender();
     });

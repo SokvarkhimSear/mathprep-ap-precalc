@@ -52,16 +52,21 @@ service cloud.firestore {
         && data.content is map;
     }
 
+    // Helper: Reject strings containing HTML angle brackets (< or >) to prevent stored XSS
+    function hasNoHtmlTags(val) {
+      return val is string && !val.matches('.*[<>].*');
+    }
+
     // Entity Validation: UserProfile
     function isValidUserProfile(data) {
       return data.keys().hasAll(['uid', 'email'])
         && data.keys().hasOnly(['uid', 'email', 'displayName', 'targetScore', 'isPremium', 'subscription_end_date', 'limmyAI_credits', 'createdAt', 'updatedAt'])
-        && data.uid is string && data.uid.size() <= 128
-        && data.email is string && data.email.size() <= 256
-        && (!('displayName' in data) || (data.displayName is string && data.displayName.size() <= 100))
+        && data.uid is string && data.uid.size() <= 128 && hasNoHtmlTags(data.uid)
+        && data.email is string && data.email.size() <= 256 && hasNoHtmlTags(data.email)
+        && (!('displayName' in data) || (data.displayName is string && data.displayName.size() <= 100 && hasNoHtmlTags(data.displayName)))
         && (!('targetScore' in data) || (data.targetScore is number && data.targetScore >= 1 && data.targetScore <= 5))
         && (!('isPremium' in data) || data.isPremium is bool)
-        && (!('subscription_end_date' in data) || (data.subscription_end_date is string && data.subscription_end_date.size() <= 100))
+        && (!('subscription_end_date' in data) || (data.subscription_end_date is string && data.subscription_end_date.size() <= 100 && hasNoHtmlTags(data.subscription_end_date)))
         && (!('limmyAI_credits' in data) || (data.limmyAI_credits is number && data.limmyAI_credits >= 0))
         && (!('createdAt' in data) || (data.createdAt is string && data.createdAt.size() <= 64))
         && (!('updatedAt' in data) || (data.updatedAt is string && data.updatedAt.size() <= 64));
@@ -71,7 +76,7 @@ service cloud.firestore {
     function isValidUserProgress(data) {
       return data.keys().hasAll(['userId'])
         && data.keys().hasOnly(['userId', 'completedLessons', 'bookmarkedFormulas', 'totalStudyMinutes', 'lastActiveAt'])
-        && data.userId is string && data.userId.size() <= 128
+        && data.userId is string && data.userId.size() <= 128 && hasNoHtmlTags(data.userId)
         && (!('completedLessons' in data) || (data.completedLessons is list && data.completedLessons.size() <= 100))
         && (!('bookmarkedFormulas' in data) || (data.bookmarkedFormulas is list && data.bookmarkedFormulas.size() <= 100))
         && (!('totalStudyMinutes' in data) || (data.totalStudyMinutes is number && data.totalStudyMinutes >= 0))
@@ -82,8 +87,8 @@ service cloud.firestore {
     function isValidExamAttempt(data) {
       return data.keys().hasAll(['userId', 'examId', 'score', 'totalQuestions'])
         && data.keys().hasOnly(['userId', 'examId', 'score', 'totalQuestions', 'percentage', 'completedAt'])
-        && data.userId is string && data.userId.size() <= 128
-        && data.examId is string && data.examId.size() <= 64
+        && data.userId is string && data.userId.size() <= 128 && hasNoHtmlTags(data.userId)
+        && data.examId is string && data.examId.size() <= 64 && hasNoHtmlTags(data.examId)
         && data.score is number && data.score >= 0
         && data.totalQuestions is number && data.totalQuestions > 0
         && (!('percentage' in data) || (data.percentage is number && data.percentage >= 0 && data.percentage <= 100))
@@ -94,14 +99,14 @@ service cloud.firestore {
     function isValidPaymentSubmission(data) {
       return data.keys().hasAll(['user_id', 'user_email', 'status', 'created_at'])
         && data.keys().hasOnly(['user_id', 'user_email', 'screenshot_url', 'status', 'amount', 'created_at', 'reviewed_at', 'reviewed_by', 'timestamp'])
-        && data.user_id is string && data.user_id.size() <= 128
-        && data.user_email is string && data.user_email.size() <= 256
-        && (!('screenshot_url' in data) || (data.screenshot_url is string && data.screenshot_url.size() <= 2000000))
+        && data.user_id is string && data.user_id.size() <= 128 && hasNoHtmlTags(data.user_id)
+        && data.user_email is string && data.user_email.size() <= 256 && hasNoHtmlTags(data.user_email)
+        && (!('screenshot_url' in data) || (data.screenshot_url is string && data.screenshot_url.size() <= 2000000 && hasNoHtmlTags(data.screenshot_url)))
         && data.status in ['pending', 'approved', 'rejected']
-        && (!('amount' in data) || (data.amount is string && data.amount.size() <= 64))
+        && (!('amount' in data) || (data.amount is string && data.amount.size() <= 64 && hasNoHtmlTags(data.amount)))
         && (!('created_at' in data) || (data.created_at is string && data.created_at.size() <= 64))
         && (!('reviewed_at' in data) || (data.reviewed_at is string && data.reviewed_at.size() <= 64))
-        && (!('reviewed_by' in data) || (data.reviewed_by is string && data.reviewed_by.size() <= 256))
+        && (!('reviewed_by' in data) || (data.reviewed_by is string && data.reviewed_by.size() <= 256 && hasNoHtmlTags(data.reviewed_by)))
         && (!('timestamp' in data) || data.timestamp is timestamp);
     }
 
@@ -111,7 +116,7 @@ service cloud.firestore {
       allow write: if false;
     }
 
-    // Curriculum Collection (Public Read, Admin Write Only for Searsokvarkhim1@gmail.com)
+    // Curriculum Collection (100% Free Public Read for All Users, Admin Write Only)
     match /curriculum/{topicId} {
       allow read: if true;
       allow write: if isAdminUser();
@@ -122,10 +127,9 @@ service cloud.firestore {
       allow read, write: if isAdminUser();
     }
 
-    // Centralized Question Bank (Published Read for Students, Full Curation Access for Admin)
+    // Centralized Question Bank (100% Free Open Read for All Users Regardless of isPremium Status, Full Curation Access for Admin)
     match /question_bank/{questionId} {
-      allow get: if isValidId(questionId) && (resource.data.is_published == true || isAdminUser());
-      allow list: if resource.data.is_published == true || isAdminUser();
+      allow read: if true;
       allow create, update: if isAdminUser() && isValidId(questionId) && isValidQuestionBankItem(incoming());
       allow delete: if isAdminUser() && isValidId(questionId);
     }

@@ -5,7 +5,16 @@ import { fileURLToPath } from 'url';
 import dotenv from 'dotenv';
 import { createServer as createViteServer } from 'vite';
 import { GoogleGenAI } from '@google/genai';
-import { sendPaymentTelegramNotification } from './app/actions/telegram.js';
+import {
+  sendPaymentTelegramNotification,
+  verifyAndRecordCheckoutTimestamp,
+} from './app/actions/telegram.js';
+import {
+  stripHtmlTags,
+  sanitizeMathInput,
+  sanitizeEmail,
+  sanitizeId,
+} from './src/utils/sanitize.js';
 
 dotenv.config({ path: '.env.local' });
 dotenv.config();
@@ -14,7 +23,41 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const app = express();
+app.disable('x-powered-by');
 const PORT = process.env.PORT || 3000;
+
+// Parse mathprep_checkout_ts cookie helper (Proxy-Safe Spam Protection without IP tracking)
+function getCheckoutCookieTimestamp(req: express.Request): number {
+  const cookieHeader = String(req.headers.cookie || '');
+  const match = cookieHeader.match(/(?:^|;\s*)mathprep_checkout_ts=(\d+)/);
+  return match ? Number(match[1]) : 0;
+}
+
+// Layer 1: Strict HTTP Security Headers Middleware
+const CSP_POLICY = [
+  "default-src 'self'",
+  "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://apis.google.com https://*.firebaseio.com https://*.googleapis.com https://cdn.jsdelivr.net",
+  "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdn.jsdelivr.net",
+  "img-src 'self' blob: data: https://*.googleusercontent.com https://*.googleapis.com https://*.firebasestorage.app",
+  "font-src 'self' data: https://fonts.gstatic.com https://cdn.jsdelivr.net",
+  "connect-src 'self' https://*.googleapis.com https://*.firebaseio.com https://*.firebaseapp.com wss://*.firebaseio.com https://identitytoolkit.googleapis.com https://securetoken.googleapis.com",
+  "frame-src 'self' https://*.firebaseapp.com https://accounts.google.com",
+  "object-src 'none'",
+  "base-uri 'self'",
+  "form-action 'self'",
+].join('; ');
+
+app.use((req, res, next) => {
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
+  res.setHeader('X-DNS-Prefetch-Control', 'off');
+  res.setHeader('Permissions-Policy', 'camera=(), microphone=(), geolocation=(), browsing-topics=()');
+  res.setHeader('Content-Security-Policy', CSP_POLICY);
+  if (req.path.startsWith('/api/')) {
+    res.setHeader('X-Frame-Options', 'DENY');
+  }
+  next();
+});
 
 // Enable CORS, JSON and URL-encoded form parsing
 app.use(cors());
@@ -24,23 +67,65 @@ app.use(express.urlencoded({ extended: true, limit: '5mb' }));
 // Serve static files from /public
 app.use(express.static(path.resolve(__dirname, 'public')));
 
-// POST /api/send-telegram
-app.post('/api/send-telegram', async (req, res) => {
+// Shared handler for POST /api/send-telegram and POST /api/notify/telegram
+// Enforces Proxy-Safe Server-Side Timestamp Check (Cookie + User Key), Input Sanitization, and Anti-Doxxing
+async function handleCheckoutTelegramNotification(req: express.Request, res: express.Response) {
   try {
-    const { submissionId, userEmail, userId, amount } = req.body || {};
-    console.log('[Server /api/send-telegram Endpoint] Triggered for:', userEmail);
+    const body = req.body || {};
+    const cleanSubmissionId = sanitizeId(body.submissionId, 128);
+    const cleanEmail = sanitizeEmail(body.userEmail);
+    const cleanUserId = sanitizeId(body.userId, 128);
+    const cleanAmount = stripHtmlTags(body.amount || '$10.00', 32) || '$10.00';
+
+    if (!cleanEmail || !cleanUserId) {
+      return res.status(400).json({
+        success: false,
+        error: 'Authenticated user account is required.',
+      });
+    }
+
+    const cookieLastTs = getCheckoutCookieTimestamp(req);
+    const tsCheck = verifyAndRecordCheckoutTimestamp(cleanUserId || cleanEmail, cookieLastTs);
+
+    if (!tsCheck.allowed) {
+      return res.status(429).json({
+        success: false,
+        cooldownSeconds: tsCheck.remainingSeconds,
+        error: `Please wait ${tsCheck.remainingSeconds} seconds before submitting another payment claim.`,
+      });
+    }
+
     const result = await sendPaymentTelegramNotification({
-      submissionId,
-      userEmail,
-      userId,
-      amount,
+      submissionId: cleanSubmissionId,
+      userEmail: cleanEmail,
+      userId: cleanUserId,
+      amount: cleanAmount,
+      skipTimestampCheck: true,
     });
-    return res.json(result);
-  } catch (err: any) {
-    console.error('[Server /api/send-telegram Exception]:', err);
-    return res.status(500).json({ success: false, error: err?.message || String(err) });
+
+    if (result.success) {
+      res.setHeader(
+        'Set-Cookie',
+        `mathprep_checkout_ts=${tsCheck.timestamp}; HttpOnly; SameSite=Lax; Path=/; Max-Age=30`
+      );
+      // Anti-doxxing: Return only minimal success confirmation, never user objects, emails, or payment statuses
+      return res.json({ success: true });
+    }
+
+    return res.status(result.status || 400).json({
+      success: false,
+      error: result.error || 'Unable to process payment notification.',
+    });
+  } catch (_err: any) {
+    return res.status(500).json({
+      success: false,
+      error: 'Failed to process payment notification.',
+    });
   }
-});
+}
+
+// POST /api/send-telegram
+app.post('/api/send-telegram', handleCheckoutTelegramNotification);
 
 // Server-Side Gemini Client (when GEMINI_API_KEY is configured)
 const geminiAi = process.env.GEMINI_API_KEY
@@ -54,7 +139,7 @@ const geminiAi = process.env.GEMINI_API_KEY
     })
   : null;
 
-// DeepSeek API Configuration
+// DeepSeek API Configuration (Server-side only)
 const DEEPSEEK_API_URL = 'https://api.deepseek.com/chat/completions';
 const DEEPSEEK_API_KEY = process.env.DEEPSEEK_API_KEY || 'sk-7095e08d115345a99a1a3009fd679532';
 
@@ -171,9 +256,14 @@ Your Core Directives:
 // POST /api/limmy/explain route
 app.post('/api/limmy/explain', async (req, res) => {
   try {
-    const { question, context, history = [] } = req.body;
+    const rawQuestion = req.body?.question;
+    const rawContext = req.body?.context;
+    const history = Array.isArray(req.body?.history) ? req.body.history : [];
 
-    if (!question || typeof question !== 'string') {
+    const question = sanitizeMathInput(rawQuestion, 2000);
+    const context = sanitizeMathInput(rawContext, 2000);
+
+    if (!question) {
       return res.status(400).json({ error: 'Question is required' });
     }
 
@@ -185,7 +275,7 @@ app.post('/api/limmy/explain', async (req, res) => {
     if (Array.isArray(history)) {
       const sanitizedHistory = history.slice(-8).map((msg: any) => ({
         role: msg.role === 'user' ? 'user' : 'assistant',
-        content: String(msg.content || ''),
+        content: sanitizeMathInput(msg.content || '', 2000),
       }));
       messages.push(...sanitizedHistory);
     }
@@ -1110,24 +1200,13 @@ app.post('/api/admin/generate-bank-questions', async (req, res) => {
 
 /**
  * POST /api/notify/telegram
- * Sends Telegram photo/caption notification for ACLEDA payment submissions.
+ * Sends Telegram notification for ACLEDA payment submissions (Protected by Proxy-Safe Timestamp Check).
  */
-app.post('/api/notify/telegram', async (req, res) => {
-  try {
-    const result = await sendPaymentTelegramNotification(req.body);
-    return res.json(result);
-  } catch (error: any) {
-    console.error('Error in /api/notify/telegram:', error);
-    return res.status(500).json({
-      success: false,
-      error: error?.message || 'Failed to send Telegram notification',
-    });
-  }
-});
+app.post('/api/notify/telegram', handleCheckoutTelegramNotification);
 
 /**
  * POST /api/upload-screenshot
- * Helper to upload or process payment screenshot image.
+ * Helper to upload or process payment screenshot image with strict filename sanitization.
  */
 app.post('/api/upload-screenshot', async (req, res) => {
   try {
@@ -1138,8 +1217,9 @@ app.post('/api/upload-screenshot', async (req, res) => {
 
     const appUrl = process.env.APP_URL || 'http://localhost:3000';
 
-    if (typeof imageBase64 === 'string' && imageBase64.startsWith('http')) {
-      return res.json({ success: true, url: imageBase64 });
+    if (typeof imageBase64 === 'string' && /^https?:\/\//i.test(imageBase64)) {
+      const safeUrl = stripHtmlTags(imageBase64, 500);
+      return res.json({ success: true, url: safeUrl });
     }
 
     const fs = await import('fs');
@@ -1148,39 +1228,44 @@ app.post('/api/upload-screenshot', async (req, res) => {
       fs.mkdirSync(uploadsDir, { recursive: true });
     }
 
-    const cleanName = `${fileName || 'screenshot_' + Date.now()}.png`;
+    // Strict filename sanitization to prevent path traversal or XSS
+    const safeBaseName = sanitizeId(fileName || `screenshot_${Date.now()}`, 64).replace(/\.+/g, '_') || `screenshot_${Date.now()}`;
+    const cleanName = `${safeBaseName}.png`;
     const filePath = path.join(uploadsDir, cleanName);
 
     const base64Data = String(imageBase64).replace(/^data:image\/\w+;base64,/, '');
     const buffer = Buffer.from(base64Data, 'base64');
+    if (buffer.length > 5 * 1024 * 1024) {
+      return res.status(413).json({ success: false, error: 'Image exceeds maximum size limit.' });
+    }
     fs.writeFileSync(filePath, buffer);
 
     const publicUrl = `${appUrl}/uploads/${cleanName}`;
-    console.log(`[Upload Screenshot] Saved screenshot to disk: ${filePath} -> Public URL: ${publicUrl}`);
-
     return res.json({ success: true, url: publicUrl, localPath: `/uploads/${cleanName}` });
-  } catch (err: any) {
-    console.error('Error in /api/upload-screenshot:', err);
-    return res.status(500).json({ success: false, error: err?.message });
+  } catch (_err: any) {
+    return res.status(500).json({ success: false, error: 'Failed to process screenshot upload.' });
   }
 });
 
 /**
  * GET & POST /api/cron/subscriptions
  * Daily Cron job to check expired monthly subscriptions and send 3-day renewal reminder notifications/emails.
+ * Strict Secret Protection & Anti-Doxxing: Requires CRON_SECRET and never returns user PII or payment records.
  */
 async function handleSubscriptionCron(req: express.Request, res: express.Response) {
-  const authHeader = req.headers.authorization;
-  const cronSecret = process.env.CRON_SECRET || 'mathprep_cron_secret_2026';
-  
-  // Verify secret if header is present or in query
-  if (req.query.secret && req.query.secret !== cronSecret) {
+  const authHeader = String(req.headers.authorization || '');
+  const bearerSecret = authHeader.startsWith('Bearer ') ? authHeader.slice(7).trim() : '';
+  const querySecret = typeof req.query.secret === 'string' ? req.query.secret : '';
+  const providedSecret = bearerSecret || querySecret;
+  const cronSecret = process.env.CRON_SECRET;
+
+  if (!cronSecret || !providedSecret || providedSecret !== cronSecret) {
     return res.status(401).json({ success: false, error: 'Unauthorized cron request' });
   }
 
   try {
     const { initializeApp, getApps, getApp } = await import('firebase/app');
-    const { getFirestore, collection, getDocs, doc, updateDoc, query, where } = await import('firebase/firestore');
+    const { getFirestore, collection, getDocs, doc, updateDoc } = await import('firebase/firestore');
     const fs = await import('fs');
 
     let expiredCount = 0;
@@ -1195,14 +1280,14 @@ async function handleSubscriptionCron(req: express.Request, res: express.Respons
       const db = getFirestore(fbApp, config.firestoreDatabaseId);
 
       const usersSnap = await getDocs(collection(db, 'users'));
-      
+
       for (const userDoc of usersSnap.docs) {
         const userData = userDoc.data();
         const subEndDateStr = userData.subscription_end_date;
 
         if (subEndDateStr) {
           const subEndDate = new Date(subEndDateStr);
-          
+
           // Check 1: Has subscription expired?
           if (subEndDate < now && userData.isPremium === true) {
             await updateDoc(doc(db, 'users', userDoc.id), {
@@ -1211,15 +1296,13 @@ async function handleSubscriptionCron(req: express.Request, res: express.Respons
               updatedAt: now.toISOString(),
             });
             expiredCount++;
-            console.log(`[Cron] Reverted expired premium user ${userData.email || userDoc.id} to Free tier.`);
           }
 
           // Check 2: Expiring within 3 days? (Reminder)
           if (subEndDate > now && subEndDate <= threeDaysFromNow && userData.isPremium === true) {
             remindersCount++;
-            console.log(`[Cron Reminder] User ${userData.email || userDoc.id} subscription expires in < 3 days on ${subEndDateStr}`);
-            // Log reminder / Send email notification via Resend or Nodemailer if RESEND_API_KEY is configured
-            if (process.env.RESEND_API_KEY) {
+            if (process.env.RESEND_API_KEY && userData.email) {
+              const safeDisplayName = stripHtmlTags(userData.displayName || 'Student', 80);
               try {
                 await fetch('https://api.resend.com/emails', {
                   method: 'POST',
@@ -1231,11 +1314,11 @@ async function handleSubscriptionCron(req: express.Request, res: express.Respons
                     from: 'MathPrep <support@mathprep.app>',
                     to: [userData.email],
                     subject: 'Your MathPrep AP Precalculus Subscription is Expiring Soon',
-                    html: `<p>Hi ${userData.displayName || 'Student'},</p><p>Your MathPrep Premium Subscription will expire on <b>${new Date(subEndDateStr).toLocaleDateString()}</b>. Please visit <a href="${process.env.APP_URL || 'https://mathprep.app'}/#/checkout">MathPrep Checkout</a> to upload a payment screenshot and extend your membership.</p>`,
+                    html: `<p>Hi ${safeDisplayName},</p><p>Your MathPrep Premium Subscription will expire on <b>${new Date(subEndDateStr).toLocaleDateString()}</b>. Please visit <a href="${process.env.APP_URL || 'https://mathprep.app'}/#/checkout">MathPrep Checkout</a> to upload a payment screenshot and extend your membership.</p>`,
                   }),
                 });
-              } catch (emailErr) {
-                console.warn('[Cron Email Error]:', emailErr);
+              } catch (_emailErr) {
+                // Suppress internal error details
               }
             }
           }
@@ -1243,15 +1326,15 @@ async function handleSubscriptionCron(req: express.Request, res: express.Respons
       }
     }
 
+    // Anti-Doxxing: Return only aggregate counters, never user objects, emails, or payment statuses
     return res.json({
       success: true,
       timestamp: now.toISOString(),
       expiredSubscriptionsProcessed: expiredCount,
       expiringRemindersSent: remindersCount,
     });
-  } catch (error: any) {
-    console.error('[Cron Error]:', error);
-    return res.status(500).json({ success: false, error: error?.message });
+  } catch (_error: any) {
+    return res.status(500).json({ success: false, error: 'Failed to execute cron job' });
   }
 }
 

@@ -173,16 +173,9 @@ export const LessonsPage: React.FC<LessonsPageProps> = ({
     };
   }, []);
 
-  const { isPremium, openPremiumModal } = useAuth();
+  const { isPremium } = useAuth();
 
   const handleOpenLesson = (lesson: Lesson) => {
-    if (lesson.unitNumber >= 2 && !isPremium) {
-      openPremiumModal(
-        `Unit ${lesson.unitKey || lesson.unitNumber} (${lesson.topicCode}: ${lesson.title})`,
-        `AP Precalculus Unit ${lesson.unitKey || lesson.unitNumber} is locked on the Free tier. Upgrade to Premium to unlock Units 2A, 2B, 3, 4A, and 4B (all 71 curriculum topics, formula sheets, and exam items)!`
-      );
-      return;
-    }
     setActiveLesson(lesson);
   };
 
@@ -335,12 +328,6 @@ export const LessonsPage: React.FC<LessonsPageProps> = ({
                         <h2 className="text-lg font-bold text-slate-900">
                           {unit.fullTitle || `Unit ${unit.unitKey || unit.number} - ${unit.title}`}
                         </h2>
-                        {unit.number >= 2 && !isPremium && (
-                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold bg-amber-100 text-amber-900 border border-amber-200">
-                            <Lock className="w-3 h-3" />
-                            <span>Premium Tier</span>
-                          </span>
-                        )}
                       </div>
                       <p className="text-xs text-slate-500">
                         {lessons.length} Topics ({lessons[0]?.topicCode} – {lessons[lessons.length - 1]?.topicCode}) · {unit.examWeight}
@@ -387,8 +374,8 @@ interface LessonCardProps {
   isPremium?: boolean;
 }
 
-const LessonCard: React.FC<LessonCardProps> = ({ lesson, onOpen, isPremium = false }) => {
-  const isLocked = lesson.unitNumber >= 2 && !isPremium;
+const LessonCard: React.FC<LessonCardProps> = ({ lesson, onOpen }) => {
+  const isLocked = false;
   const isReviewTopic = lesson.topicCode.toUpperCase().includes('REVIEW');
   const mcqCount = lesson.practice_section?.mcq?.length || 0;
   const frqCount = lesson.practice_section?.frq?.length || 0;
