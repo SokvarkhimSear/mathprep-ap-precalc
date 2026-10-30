@@ -244,28 +244,28 @@ export const LessonsPage: React.FC<LessonsPageProps> = ({
       </div>
 
       {/* Page Header */}
-      <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
-        <div>
+      <div className="flex flex-col gap-5">
+        <div className="max-w-3xl">
           <div className="text-xs font-bold text-blue-600 uppercase tracking-wider mb-1">
             Complete AP Precalculus Curriculum (Units 1, 2A, 2B, 3, 4A, 4B · {lessonsList.length} Topics)
           </div>
-          <h1 className="text-3xl font-bold text-slate-900 tracking-tight">
+          <h1 className="text-2xl sm:text-3xl font-bold text-slate-900 tracking-tight">
             AP Precalculus Lessons Hub
           </h1>
-          <p className="text-sm text-slate-600 mt-1 max-w-2xl">
+          <p className="text-sm text-slate-600 mt-1.5 leading-relaxed">
             Every topic and review module across Unit 1, Unit 2A, Unit 2B, Unit 3, Unit 4A, and Unit 4B—complete with Master Lessons, Dedicated Formula Sheets, AP Multiple-Choice Questions, and Multi-Part Free-Response Questions with Scoring Rubrics.
           </p>
         </div>
 
         {/* Unit Filter */}
-        <div className="self-start md:self-auto">
+        <div className="w-full">
           <UnitFilterBar selectedUnit={selectedUnit} onSelectUnit={onSelectUnit} />
         </div>
       </div>
 
       {/* Search Bar & Topic Count */}
-      <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4">
-        <div className="relative flex-1 max-w-md">
+      <div className="flex flex-wrap items-center justify-between gap-4">
+        <div className="relative flex-1 min-w-[240px] max-w-md">
           <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
           <input
             type="text"
@@ -275,7 +275,7 @@ export const LessonsPage: React.FC<LessonsPageProps> = ({
             className="w-full pl-10 pr-4 py-2.5 text-sm bg-white border border-slate-200 rounded-xl text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-600 shadow-2xs transition-all"
           />
         </div>
-        <div className="flex items-center gap-2 text-xs text-slate-500">
+        <div className="flex flex-wrap items-center gap-2 text-xs text-slate-500">
           <span>Showing:</span>
           <span className="font-semibold text-blue-600">
             {selectedUnitLabel} ({filteredLessons.length} of {lessonsList.length} topics)

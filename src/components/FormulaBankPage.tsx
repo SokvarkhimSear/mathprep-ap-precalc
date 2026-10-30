@@ -138,21 +138,21 @@ export const FormulaBankPage: React.FC<FormulaBankPageProps> = ({
       </div>
 
       {/* Page Header */}
-      <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
-        <div>
+      <div className="flex flex-col gap-5">
+        <div className="max-w-3xl">
           <div className="text-xs font-bold text-blue-600 uppercase tracking-wider mb-1">
             Reference Bank
           </div>
-          <h1 className="text-3xl font-bold text-slate-900 tracking-tight">
+          <h1 className="text-2xl sm:text-3xl font-bold text-slate-900 tracking-tight">
             Official AP Precalculus Formula Sheet
           </h1>
-          <p className="text-sm text-slate-600 mt-1 max-w-2xl">
+          <p className="text-sm text-slate-600 mt-1.5 leading-relaxed">
             Essential reference equations across Units 1, 2A, 2B, 3, 4A, and 4B rendered in authentic LaTeX Computer Modern math notation. Click to copy raw LaTeX source code or bookmark for review.
           </p>
         </div>
 
         {/* Clean Unit Filter */}
-        <div className="self-start md:self-auto">
+        <div className="w-full">
           <UnitFilterBar
             selectedUnit={selectedUnit}
             onSelectUnit={onSelectUnit}
@@ -161,8 +161,8 @@ export const FormulaBankPage: React.FC<FormulaBankPageProps> = ({
       </div>
 
       {/* Search Bar & Active Status */}
-      <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4">
-        <div className="relative flex-1 max-w-md">
+      <div className="flex flex-wrap items-center justify-between gap-4">
+        <div className="relative flex-1 min-w-[240px] max-w-md">
           <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
           <input
             type="text"
@@ -173,7 +173,7 @@ export const FormulaBankPage: React.FC<FormulaBankPageProps> = ({
           />
         </div>
 
-        <div className="flex items-center gap-3 text-xs text-slate-500">
+        <div className="flex flex-wrap items-center gap-3 text-xs text-slate-500">
           {currentUser && (
             <button
               onClick={() => setShowOnlyBookmarks(!showOnlyBookmarks)}
